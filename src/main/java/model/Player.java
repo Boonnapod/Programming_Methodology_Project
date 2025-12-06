@@ -40,7 +40,10 @@ public class Player {
             return true;
         }
         // เงินไม่พอ (Logic ล้มละลายอยู่ใน GameController)
-        return false;
+        else{
+            this.money -= amount;
+            return false;
+        }
     }
 
     public void goToJail() {

@@ -62,7 +62,8 @@ public class GameController {
             } else if (currentPlayer.isInJail()) {
                 // Bug Fix: handleJailTurn คืนค่า boolean เพื่อบอกว่าผู้เล่นควรเล่นเทิร์นปกติหรือไม่
                 if (handleJailTurn(currentPlayer)) {
-                    takeNormalTurn(currentPlayer);
+                    if(!currentPlayer.isInJail())
+                        takeNormalTurn(currentPlayer);
                     turnPlayed = true;
                 }
             }

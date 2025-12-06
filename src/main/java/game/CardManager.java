@@ -32,7 +32,7 @@ public class CardManager {
 
         // เพิ่มการ์ดซ้ำเพื่อให้มีจำนวนพอสมควร
         deck.add(new SkipTurnCard("The taxman caught you. Skip next turn.", 1));
-        deck.add(new ReceiveMoneyCard("Birthday money! Collect $150.", 150));
+        deck.add(new ReceiveMoneyCard("OraOraHaHa! Collect $150.", 150));
         deck.add(new MoveToOpponentBestPropertyCard("Teleportation gone wrong! Jump to foe's best property.", players));
     }
 
