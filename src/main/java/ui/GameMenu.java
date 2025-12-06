@@ -37,7 +37,7 @@ public class GameMenu {
         }
 
         // 2. UI Components
-        Label titleLabel = new Label("เกมเศรษฐี");
+        Label titleLabel = new Label("เกมคนจน");
         titleLabel.setFont(Font.font("Arial", FontWeight.BOLD, 48)); // ใช้ FontWeight.BOLD
         titleLabel.setStyle("-fx-text-fill: #333333;"); // ตั้งค่าสีข้อความ
 

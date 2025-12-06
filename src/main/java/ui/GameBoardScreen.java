@@ -5,7 +5,7 @@ import model.*;
 import model.Card;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
-import javafx.application.Platform; // *** NEW: Import Platform ***
+import javafx.application.Platform; // *** สำคัญ: สำหรับ Platform.runLater() ***
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -25,7 +25,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-// สมมติว่า Main Class อยู่ในขอบเขตการเข้าถึงและมี static final WIDTH/HEIGHT
 public class GameBoardScreen {
     private final Stage primaryStage;
     private final GameController gameController;
@@ -130,7 +129,6 @@ public class GameBoardScreen {
         updateTurnDisplay(rollButton); // Initial update for color
 
         Scene gameScene = new Scene(root, WIDTH, HEIGHT);
-        // แก้ไข: Main class ไม่มีในขอบเขตการเข้าถึง ต้องอ้างอิงถึง style.css โดยตรง
         try {
             gameScene.getStylesheets().add(getClass().getResource("/style.css").toExternalForm());
         } catch (NullPointerException e) {
@@ -145,18 +143,64 @@ public class GameBoardScreen {
     private void startTurnAndAnimate(Button rollButton) {
         Player activePlayer = gameController.getCurrentPlayer();
 
-        // 1. ตรวจสอบ Skip Turn
+        // 1. ตรวจสอบ Jail (NEW LOGIC)
+        if (activePlayer.isInJail()) {
+            boolean shouldPlayTurn = showJailDialog(activePlayer, rollButton);
+            if (!shouldPlayTurn) {
+                // ไม่ได้ออกจากคุก -> ข้ามเทิร์น
+                gameController.moveToNextPlayer();
+                updateTurnDisplay(rollButton);
+                return;
+            }
+            // หาก shouldPlayTurn เป็น true แสดงว่าผู้เล่นจ่ายเงินออกแล้ว ให้ดำเนินการต่อ
+        }
+
+        // 2. ตรวจสอบ Skip Turn
         if (activePlayer.getSkipTurns() > 0) {
             showSkipTurnDialog(activePlayer, rollButton);
             return;
         }
 
-        // 2. ทอยลูกเต๋า
+        // 3. ทอยลูกเต๋า
         int steps = gameController.getDice().roll();
         System.out.println(activePlayer.getName() + " rolled a " + steps);
 
-        // 3. เริ่มแอนิเมชันการเดิน
+        // 4. เริ่มแอนิเมชันการเดิน
         animateMovement(activePlayer, steps, rollButton);
+    }
+
+    // *** NEW: Dialog สำหรับ Jail ***
+    private boolean showJailDialog(Player player, Button rollButton) {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("You are in Jail!");
+        alert.setHeaderText(player.getName() + " is in Jail.");
+        alert.setContentText("Do you want to pay $50 to get out and roll the dice?");
+
+        ButtonType payButton = new ButtonType("Pay $50 and Roll");
+        ButtonType stayButton = new ButtonType("Stay in Jail", ButtonBar.ButtonData.CANCEL_CLOSE);
+
+        alert.getButtonTypes().setAll(payButton, stayButton);
+
+        Optional<ButtonType> result = alert.showAndWait();
+
+        if (result.isPresent() && result.get() == payButton) {
+            // ผู้เล่นเลือกจ่ายเงิน
+            if (player.getMoney() >= 50 && player.deductMoney(50)) {
+                player.releaseFromJail();
+                updatePlayerMoney(player);
+                showSimpleAlert("Jail Release", player.getName() + " paid $50 and is now released!");
+                return true; // ออกจากคุกสำเร็จ -> เล่นต่อได้
+
+            } else {
+                // เงินไม่พอ
+                showSimpleAlert("Transaction Failed", player.getName() + " cannot afford to pay $50 and stays in Jail.");
+                return false; // ไม่ได้ออกจากคุก -> ต้องข้ามเทิร์น
+            }
+        } else {
+            // ผู้เล่นเลือกอยู่ต่อ
+            showSimpleAlert("Jail Stay", player.getName() + " chose to stay in Jail for this turn.");
+            return false; // อยู่ในคุก -> ต้องข้ามเทิร์น
+        }
     }
 
     private void showSkipTurnDialog(Player player, Button rollButton) {
@@ -360,7 +404,7 @@ public class GameBoardScreen {
         drawnCard.execute(player, board);
 
         updatePlayerMoney(player);
-        updatePlayerTokens();
+        updatePlayerTokens(); // อัปเดตตำแหน่งหากมีการย้ายตัวละคร
 
         // หลังจาก Execute Card ต้องมีการตรวจสอบและอัปเดต UI ที่เกี่ยวข้อง
         checkBankruptcy(player);
@@ -385,7 +429,7 @@ public class GameBoardScreen {
         if (result.isPresent()) {
             int targetPosition = Integer.parseInt(result.get().split("]")[0].substring(1));
 
-            // เรียกใช้เมธอดใหม่ใน GameController
+            // เรียกใช้เมธอดใน GameController เพื่อคำนวณการเดินและเก็บเงินผ่าน Go
             gameController.handleAirplaneAction(player, targetPosition);
 
             updatePlayerMoney(player);
@@ -393,13 +437,15 @@ public class GameBoardScreen {
 
             // Logic ต่อไป: จัดการ action ที่ช่องปลายทาง
             Square landedSquare = board.getSquare(player.getPosition());
+            landedSquare.landOn(player); // เรียก landOn เพื่อให้เกิด Console Log และเตรียมปฏิสัมพันธ์
+
             if (landedSquare instanceof Property) {
                 // ถ้าลงช่อง Property ต้องไปเข้า Logic ซื้อ/เช่าอีกครั้ง
                 handlePropertyAction(player, (Property) landedSquare, rollButton);
                 return;
             }
         } else {
-            showSimpleAlert("Action Required", "You must select a destination to fly.");
+            showSimpleAlert("Action Required", "You must select a destination to fly. Turn skipped.");
         }
 
         checkBankruptcy(player);
@@ -516,7 +562,7 @@ public class GameBoardScreen {
             backgroundColor = "#A9A9A9"; // Airport (เทา)
         } else if (square.getPosition() == 10) {
             backgroundColor = "#FFFF99"; // Lottery (เหลืองอ่อน)
-        } else if (square.getPosition() == 15) {
+        } else if (square.getPosition() == 15) { // Assuming Go To Jail is at 15
             backgroundColor = "#FFFF99"; // Go To Jail (เหลืองอ่อน)
         } else if (square instanceof Property) {
             Property property = (Property) square;
@@ -598,10 +644,11 @@ public class GameBoardScreen {
     }
 
     private int getIndexFromGrid(int row, int col, int dim) {
-        if (row == dim - 1) return dim - 1 - col;
-        if (col == 0 && row >= 1 && row <= 4) return dim - 1 - row + 5;
-        if (row == 0 && col >= 0 && col <= 5) return col + 10;
-        if (col == dim - 1 && row >= 1 && row <= 4) return row + 15;
+        // Logic to map grid coordinates to a 20-square loop (dim=6)
+        if (row == dim - 1) return dim - 1 - col; // Bottom Row (19 -> 0)
+        if (col == 0 && row >= 1 && row <= 4) return dim - 1 - row + 5; // Left Column (5 -> 9)
+        if (row == 0 && col >= 0 && col <= 5) return col + 10; // Top Row (10 -> 15)
+        if (col == dim - 1 && row >= 1 && row <= 4) return row + 15; // Right Column (16 -> 19)
         return -1;
     }
 
@@ -628,12 +675,13 @@ public class GameBoardScreen {
         try {
             String fileName = CHARACTER_FILES[index];
             String fullPath = RESOURCE_PATH + fileName;
-            Image image = new Image(getClass().getResourceAsStream(fullPath));
+            // Use getResource() and toExternalForm() for reliable resource loading in JavaFX
+            Image image = new Image(getClass().getResource(fullPath).toExternalForm());
             imageView.setImage(image);
             imageView.setFitWidth(50);
             imageView.setPreserveRatio(true);
         } catch (Exception e) {
-            System.err.println("!!! ERROR: ไม่พบไฟล์ภาพตัวละคร: " + CHARACTER_FILES[index]);
+            System.err.println("!!! ERROR: ไม่พบไฟล์ภาพตัวละคร: " + CHARACTER_FILES[index] + ". Error: " + e.getMessage());
             imageView.setFitWidth(50);
         }
         return imageView;
