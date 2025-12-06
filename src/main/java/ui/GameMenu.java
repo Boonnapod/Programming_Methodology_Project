@@ -1,3 +1,6 @@
+package ui;
+
+import game.GameController; // *** NEW IMPORT ***
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -13,15 +16,14 @@ import javafx.stage.Stage;
 public class GameMenu {
 
     private final Stage primaryStage;
-    // กำหนดพาธสำหรับภาพปกเกม: bg.png
-    private static final String COVER_IMAGE_PATH = "/Image/bg.png";
+    private static final String COVER_IMAGE_PATH = "/Image/bg.jpg";
 
     public GameMenu(Stage primaryStage) {
         this.primaryStage = primaryStage;
     }
 
     public Scene createMenuScene() {
-        // 1. โหลดภาพปกเกม (bg.png)
+        // 1. โหลดภาพปกเกม
         ImageView coverImageView = null;
         try {
             Image coverImage = new Image(getClass().getResourceAsStream(COVER_IMAGE_PATH));
@@ -29,23 +31,32 @@ public class GameMenu {
             coverImageView.setFitWidth(Main.WIDTH * 0.9);
             coverImageView.setPreserveRatio(true);
         } catch (Exception e) {
-            System.err.println("!!! ERROR: ไม่พบไฟล์ภาพปก: " + COVER_IMAGE_PATH + " จะแสดงแค่ข้อความและปุ่มแทน");
+            System.err.println("!!! ERROR: ไม่พบไฟล์ภาพปก: " + COVER_IMAGE_PATH);
         }
 
+        // 2. UI Components
         Label titleLabel = new Label("เกมเศรษฐี");
-        // ใช้ CSS Class แทนการกำหนด Font โดยตรง
-        titleLabel.getStyleClass().add("title-label");
+        titleLabel.setFont(new Font("Arial", 48));
 
         Button startGameButton = new Button("เริ่มเกม");
+        startGameButton.setMinWidth(200);
+        startGameButton.setMinHeight(40);
+
         Button exitButton = new Button("ออกเกม");
+        exitButton.setMinWidth(200);
+        exitButton.setMinHeight(40);
 
-        // ใช้ CSS Class สำหรับปุ่ม
-        startGameButton.getStyleClass().add("menu-button");
-        exitButton.getStyleClass().add("menu-button");
-
-        // Event Handling
+        // Event Handling (สำคัญ: สร้าง GameController และส่งไป)
         startGameButton.setOnAction(e -> {
-            CharacterSelectScreen selectScreen = new CharacterSelectScreen(primaryStage);
+            // *** 1. สร้าง GameController ที่นี่ ***
+            GameController gameController = new GameController();
+
+            // *** 2. ส่ง GameController ไปยัง CharacterSelectScreen ***
+            CharacterSelectScreen selectScreen = new CharacterSelectScreen(
+                    primaryStage,
+                    gameController
+            );
+
             primaryStage.setScene(selectScreen.createCharacterSelectScene());
             primaryStage.setTitle("เกมเศรษฐี - เลือกตัวละคร");
         });
@@ -66,12 +77,9 @@ public class GameMenu {
         }
 
         menuLayout.getChildren().addAll(startGameButton, exitButton);
-        menuLayout.getStyleClass().add("menu-background"); // ใช้ CSS background
 
-        // 4. สร้าง Scene และเพิ่ม Stylesheet
+        // 4. สร้าง Scene
         Scene menuScene = new Scene(menuLayout, Main.WIDTH, Main.HEIGHT);
-        menuScene.getStylesheets().add(getClass().getResource("/style.css").toExternalForm());
-
         return menuScene;
     }
 }

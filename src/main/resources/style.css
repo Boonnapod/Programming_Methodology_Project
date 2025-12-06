@@ -1,93 +1,100 @@
-/* ==================================== */
-/* GLOBAL STYLES */
-/* ==================================== */
+/*
+ * ไฟล์: style.css
+ * วางไว้ในโฟลเดอร์ resources/
+ */
+
+/* ====================================
+ * การตั้งค่าพื้นฐานของเกม
+ * ==================================== */
 .root {
-    -fx-font-family: "Tahoma", sans-serif;
+    /* กำหนดฟอนต์หลักของแอปพลิเคชัน (ถ้ามีฟอนต์ในเครื่อง) */
+    -fx-font-family: "Arial", sans-serif;
+    -fx-background-color: #ECECEC; /* สีพื้นหลังอ่อนๆ */
 }
 
-/* ==================================== */
-/* GAME MENU STYLES */
-/* ==================================== */
-
-.menu-background {
-    -fx-background-color: linear-gradient(to bottom right, #3498db, #2c3e50); /* สีน้ำเงินเข้ม Gradient */
+/* พื้นหลังของ GameBoardScreen */
+.game-background {
+    -fx-background-color: #388E3C; /* สีเขียวเข้มคล้ายผืนหญ้า (Monopoly Green) */
 }
 
-.title-label {
-    -fx-font-size: 48px;
-    -fx-font-weight: bold;
+/* ====================================
+ * แผงแสดงผลผู้เล่น (Player Panel)
+ * ==================================== */
+.player-panel {
+    /* ใช้สำหรับ VBox ที่สร้างโดย createPlayerPanel() หากมีการเพิ่ม style class เข้าไป */
+    -fx-background-radius: 5;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 10, 0.5, 0, 0);
+}
+
+.label {
+    /* ตั้งค่า Label ทั่วไป */
+    -fx-text-fill: #333333;
+}
+
+/* ====================================
+ * กระดานเกม (GridPane)
+ * ==================================== */
+.board-grid {
+    /* จัดการเส้นแบ่งช่องกระดาน */
+    -fx-border-color: #000000;
+    -fx-border-width: 2;
+    -fx-grid-lines-visible: true;
+    -fx-background-color: #FFFFFF; /* พื้นหลังตรงกลาง Grid */
+}
+
+/* ช่องกระดานแต่ละช่อง (SquareBox) */
+/* เนื่องจาก createSquareBox ใช้ inline style (setStyle) ใน Java
+   สำหรับสีพื้นหลังของช่อง (Go, Jail, Property) เราจะตั้งค่าแค่พื้นฐานที่นี่ */
+.square-box {
+    -fx-border-color: #CCCCCC;
+    -fx-border-width: 1;
+    -fx-padding: 5;
+}
+
+/* ====================================
+ * ปุ่ม (Buttons)
+ * ==================================== */
+.button {
+    -fx-background-color: #FF9800; /* สีส้ม */
     -fx-text-fill: white;
-    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.6), 5, 0, 0, 2);
+    -fx-font-weight: bold;
+    -fx-padding: 8 15;
+    -fx-background-radius: 3;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 5, 0.0, 0, 1);
 }
 
-.menu-button {
+.button:hover {
+    -fx-background-color: #F57C00; /* สีส้มเข้มขึ้นเมื่อ Hover */
+}
+
+/* ปุ่มทอยลูกเต๋าโดยเฉพาะ */
+#roll-button {
+    /* หากคุณใช้ n.setId("roll-button"); ใน Java */
+    -fx-background-color: #E53935; /* สีแดง */
+    -fx-text-fill: white;
+    -fx-font-size: 28px;
+    -fx-min-width: 150px;
+    -fx-min-height: 150px;
+    -fx-background-radius: 100%; /* ทำให้เป็นปุ่มกลม */
+}
+
+#roll-button:hover {
+    -fx-background-color: #D32F2F;
+}
+
+/* ====================================
+ * Character Select Screen
+ * ==================================== */
+/* สไตล์สำหรับปุ่มควบคุมเลือกตัวละคร (< และ >) */
+.h-box .button {
+    -fx-background-color: #4CAF50;
+    -fx-text-fill: white;
     -fx-font-size: 18px;
-    -fx-text-fill: white;
-    -fx-background-color: #e74c3c; /* สีแดง */
-    -fx-padding: 10px 40px;
-    -fx-background-radius: 5px;
-    -fx-cursor: hand;
+    -fx-padding: 5 10;
+    -fx-background-radius: 5;
 }
 
-.menu-button:hover {
-    -fx-background-color: #c0392b;
-    -fx-scale-y: 1.05;
-}
-
-/* ==================================== */
-/* CHARACTER SELECT STYLES */
-/* ==================================== */
-
-.select-background {
-    -fx-background-color: linear-gradient(to top left, #2ecc71, #27ae60); /* สีเขียว Gradient */
-}
-
-.subtitle-label {
-    -fx-font-size: 32px;
-    -fx-font-weight: bold;
-    -fx-text-fill: white;
-    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.4), 5, 0, 0, 2);
-}
-
-.selection-box {
-    -fx-border-color: #34495e;
-    -fx-border-width: 3px;
-    -fx-border-radius: 10px;
-    -fx-background-color: rgba(255, 255, 255, 0.15); /* พื้นหลังโปร่งใสเล็กน้อย */
-    -fx-padding: 20px;
-}
-
-.player-title {
-    -fx-font-size: 24px;
-    -fx-font-weight: bold;
-    -fx-text-fill: #34495e;
-}
-
-.nav-button {
-    -fx-font-size: 18px;
-    -fx-font-weight: bold;
-    -fx-background-color: #3498db;
-    -fx-text-fill: white;
-    -fx-min-width: 50px;
-    -fx-padding: 10px;
-    -fx-background-radius: 5px;
-    -fx-cursor: hand;
-}
-
-.nav-button:hover {
-    -fx-background-color: #2980b9;
-}
-
-.confirm-button {
-    -fx-font-size: 20px;
-    -fx-font-weight: bold;
-    -fx-background-color: #f1c40f;
-    -fx-text-fill: #34495e;
-    -fx-padding: 15px 50px;
-    -fx-background-radius: 8px;
-    -fx-cursor: hand;
-}
-
-.confirm-button:hover {
-    -fx-background-color: #f39c12;
+.h-box .button:hover {
+    -fx-background-color: #388E3C;
 }
