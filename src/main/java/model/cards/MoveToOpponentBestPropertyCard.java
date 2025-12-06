@@ -1,6 +1,9 @@
 package model.cards;
 
-import model.*;
+import model.Board;
+import model.Card;
+import model.Player;
+import model.Property;
 
 import java.util.List;
 

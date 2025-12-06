@@ -1,18 +1,16 @@
 package ui;
 
 import game.GameController;
-import game.Dice;
-import model.Board;
-import model.JailSquare;
-import model.Player;
-import model.Square;
+import model.*;
+import model.Card;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
+import javafx.application.Platform; // *** NEW: Import Platform ***
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
+import javafx.scene.control.*;
+import javafx.scene.effect.DropShadow;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
@@ -21,10 +19,11 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
 import javafx.util.Duration;
-import javafx.scene.effect.DropShadow; // *** NEW IMPORT ***
 
-import java.util.List;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 // สมมติว่า Main Class อยู่ในขอบเขตการเข้าถึงและมี static final WIDTH/HEIGHT
 public class GameBoardScreen {
@@ -36,21 +35,27 @@ public class GameBoardScreen {
 
     private Label player1MoneyLabel;
     private Label player2MoneyLabel;
+    private Label playerTurnLabel;
 
     private final List<ImageView> playerTokens;
     private final GridPane boardGrid;
 
+    // ... (Constants)
     private static final String[] CHARACTER_FILES = {
             "character_01.png", "character_02.png", "character_03.png"
     };
     private static final String RESOURCE_PATH = "/Character/";
-    private static final int MOVEMENT_DELAY_MS = 300; // ความเร็วในการเดินต่อช่อง (0.3 วินาที)
+    private static final int MOVEMENT_DELAY_MS = 300;
+
+    // สมมติขนาดหน้าจอ
+    private static final int WIDTH = 1000;
+    private static final int HEIGHT = 800;
 
     public GameBoardScreen(Stage primaryStage, GameController gameController, List<Player> players, List<Integer> selectedCharIndices) {
         this.primaryStage = primaryStage;
         this.gameController = gameController;
         this.board = gameController.getBoard();
-        this.players = players;
+        this.players = gameController.getPlayers();
         this.selectedCharIndices = selectedCharIndices;
 
         this.playerTokens = new ArrayList<>();
@@ -59,8 +64,7 @@ public class GameBoardScreen {
     }
 
     private void initializePlayerTokens() {
-        // กำหนดสีเงาสำหรับผู้เล่น 1 (index 0) และ ผู้เล่น 2 (index 1)
-        Color[] shadowColors = {Color.LIMEGREEN, Color.RED}; // เขียวสำหรับ P1, แดงสำหรับ P2
+        Color[] shadowColors = {Color.LIMEGREEN, Color.RED};
 
         for (int i = 0; i < players.size(); i++) {
             ImageView token = createCharacterImageView(selectedCharIndices.get(i));
@@ -68,63 +72,70 @@ public class GameBoardScreen {
             token.setFitHeight(30);
             token.setId("player-token-" + i);
 
-            // *** ADD DropShadow Effect ***
             if (i < shadowColors.length) {
                 DropShadow dropShadow = new DropShadow();
-                dropShadow.setColor(shadowColors[i]); // ใช้สีตาม index
-                dropShadow.setRadius(8.0); // ปรับรัศมี
-                dropShadow.setSpread(0.4); // ปรับความกระจายเงา
+                dropShadow.setColor(shadowColors[i]);
+                dropShadow.setRadius(8.0);
+                dropShadow.setSpread(0.4);
                 dropShadow.setOffsetX(0);
                 dropShadow.setOffsetY(0);
                 token.setEffect(dropShadow);
             }
-            // *** END DropShadow Effect ***
-
             playerTokens.add(token);
         }
     }
 
     public Scene createGameScene() {
         BorderPane root = new BorderPane();
-        // บรรทัดนี้จะอ้างถึงสไตล์ใน style.css ซึ่งคุณควรเพิ่ม .game-background { -fx-background-color: #f0f0f0; } เข้าไป
         root.getStyleClass().add("game-background");
 
+        // Roll Button
         Button rollButton = new Button("Roll Dice!");
         rollButton.setFont(Font.font("Arial", FontWeight.BOLD, 24));
         rollButton.setMinWidth(150);
         rollButton.setMinHeight(150);
         rollButton.setId("roll-button");
-
-        // *** เปลี่ยน Logic ให้เรียกเมธอด Animation ***
         rollButton.setOnAction(e -> {
-            // ปิดปุ่ม Roll เพื่อป้องกันการคลิกซ้ำระหว่างแอนิเมชัน
             rollButton.setDisable(true);
             startTurnAndAnimate(rollButton);
         });
 
-        StackPane centerStack = new StackPane(boardGrid, rollButton);
+        // Player Turn Label
+        playerTurnLabel = new Label("Turn: " + gameController.getCurrentPlayer().getName());
+        playerTurnLabel.setFont(Font.font("Arial", FontWeight.BOLD, 20));
+        playerTurnLabel.setStyle("-fx-text-fill: #333333;");
+
+        VBox centerControl = new VBox(10, playerTurnLabel, rollButton);
+        centerControl.setAlignment(Pos.CENTER);
+
+        StackPane centerStack = new StackPane(boardGrid, centerControl);
         root.setCenter(centerStack);
 
-        // วาง Player Panels (บนซ้าย & ล่างขวา)
+        // Player Panels
         if (players.size() >= 1) {
             HBox player1Panel = createPlayerPanel(players.get(0), selectedCharIndices.get(0), true);
-            root.setTop(player1Panel); // <-- ด้านบน
+            root.setTop(player1Panel);
             BorderPane.setAlignment(player1Panel, Pos.TOP_LEFT);
             BorderPane.setMargin(player1Panel, new Insets(10));
         }
 
         if (players.size() >= 2) {
             HBox player2Panel = createPlayerPanel(players.get(1), selectedCharIndices.get(1), false);
-            root.setBottom(player2Panel); // <-- ด้านล่าง
+            root.setBottom(player2Panel);
             BorderPane.setAlignment(player2Panel, Pos.BOTTOM_RIGHT);
             BorderPane.setMargin(player2Panel, new Insets(10));
         }
 
-        // เรียกครั้งแรกเพื่อวาง Token ที่ช่อง Go (0)
         updatePlayerTokens();
+        updateTurnDisplay(rollButton); // Initial update for color
 
-        Scene gameScene = new Scene(root, Main.WIDTH, Main.HEIGHT);
-        gameScene.getStylesheets().add(getClass().getResource("/style.css").toExternalForm());
+        Scene gameScene = new Scene(root, WIDTH, HEIGHT);
+        // แก้ไข: Main class ไม่มีในขอบเขตการเข้าถึง ต้องอ้างอิงถึง style.css โดยตรง
+        try {
+            gameScene.getStylesheets().add(getClass().getResource("/style.css").toExternalForm());
+        } catch (NullPointerException e) {
+            System.err.println("Warning: Could not load style.css. Ensure it is in the resource path.");
+        }
         return gameScene;
     }
 
@@ -132,15 +143,35 @@ public class GameBoardScreen {
      * เริ่มเทิร์น ทอยลูกเต๋า และจัดการแอนิเมชัน
      */
     private void startTurnAndAnimate(Button rollButton) {
-        // 1. ทอยลูกเต๋า
-        Dice dice = gameController.getDice();
-        int steps = dice.roll();
+        Player activePlayer = gameController.getCurrentPlayer();
 
-        Player activePlayer = gameController.getPlayers().get(gameController.getCurrentPlayerIndex());
+        // 1. ตรวจสอบ Skip Turn
+        if (activePlayer.getSkipTurns() > 0) {
+            showSkipTurnDialog(activePlayer, rollButton);
+            return;
+        }
+
+        // 2. ทอยลูกเต๋า
+        int steps = gameController.getDice().roll();
         System.out.println(activePlayer.getName() + " rolled a " + steps);
 
-        // 2. เริ่มแอนิเมชันการเดิน
+        // 3. เริ่มแอนิเมชันการเดิน
         animateMovement(activePlayer, steps, rollButton);
+    }
+
+    private void showSkipTurnDialog(Player player, Button rollButton) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Skip Turn");
+        alert.setHeaderText(player.getName() + " must skip turn!");
+        alert.setContentText("You have " + player.getSkipTurns() + " turn(s) left to skip.");
+
+        player.setSkipTurns(player.getSkipTurns() - 1);
+
+        alert.showAndWait();
+
+        // จบเทิร์นทันทีหลังจาก Skip
+        gameController.moveToNextPlayer();
+        updateTurnDisplay(rollButton);
     }
 
     /**
@@ -153,15 +184,12 @@ public class GameBoardScreen {
         for (int i = 1; i <= steps; i++) {
             final int step = i;
 
-            // KeyFrame แต่ละอันคือการเดิน 1 ช่อง
             KeyFrame keyFrame = new KeyFrame(
                     Duration.millis(MOVEMENT_DELAY_MS * step),
                     event -> {
-
                         int oldPosition = player.getPosition();
                         int newPosition = (oldPosition + 1) % boardSize;
 
-                        // *** ใช้ warp() เพื่อย้ายตำแหน่งโดยไม่เรียก Logic ผ่าน Go ของ Player.move() ***
                         player.warp(newPosition);
 
                         // ตรวจสอบการผ่าน Go (รับเงิน $200) ด้วยตัวเอง
@@ -170,8 +198,6 @@ public class GameBoardScreen {
                             updatePlayerMoney(player);
                             System.out.println(player.getName() + " passed Go! Collected $200.");
                         }
-
-                        // อัปเดต UI Token
                         updatePlayerTokens();
                     }
             );
@@ -180,34 +206,248 @@ public class GameBoardScreen {
 
         // KeyFrame สุดท้าย: เมื่อแอนิเมชั่นจบ
         timeline.setOnFinished(event -> {
-            // 3. เรียก Logic การลงช่องสุดท้าย (LandOn) และจบเทิร์น
-            gameController.finalizeTurnLogic(player);
-
-            // Final UI updates
-            updatePlayerMoney(player);
-            updatePlayerTokens();
-
-            // 4. เปิดปุ่ม Roll กลับมา
-            rollButton.setDisable(false);
+            // *** FIX: ใช้ Platform.runLater() เพื่อหลีกเลี่ยง IllegalStateException ***
+            Platform.runLater(() -> {
+                handleLandedSquareInteraction(player, rollButton);
+            });
         });
 
         timeline.play();
     }
 
+    // =========================================================================
+    // *** Interactive Logic Handling ***
+    // =========================================================================
 
-    /**
-     * แก้ไขการลบ Token ออกจาก Parent เดิมก่อนเพื่อป้องกัน duplicate children added
-     */
+    private void handleLandedSquareInteraction(Player player, Button rollButton) {
+        Square landedSquare = board.getSquare(player.getPosition());
+
+        // 1. เรียก landOn() เพื่อให้ Console Log ทำงาน และแสดงข้อความเบื้องต้น
+        landedSquare.landOn(player);
+
+        // 2. จัดการ Logic ตามประเภทช่อง
+        if (landedSquare instanceof Property) {
+            handlePropertyAction(player, (Property) landedSquare, rollButton);
+        } else if (landedSquare instanceof CardSquare) {
+            handleCardAction(player, rollButton);
+        } else if (landedSquare instanceof AirplaneSquare) {
+            handleAirplaneAction(player, rollButton);
+        } else {
+            // สำหรับ Go, Jail (Just Visiting), Lottery, Go to Jail (ซึ่ง goToJail ทำงานใน landOn แล้ว)
+            checkBankruptcy(player);
+            gameController.moveToNextPlayer();
+            updateTurnDisplay(rollButton);
+        }
+    }
+
+    private void handlePropertyAction(Player player, Property property, Button rollButton) {
+        // ตรวจสอบ Rentable และการจ่ายค่าเช่า
+        if (property.getOwner() != null && property.getOwner() != player) {
+
+            // 1. Logic การจ่ายค่าเช่า (รวมถึง Buyout)
+            int rent = property.calculateRent(0);
+
+            Alert rentAlert = new Alert(Alert.AlertType.CONFIRMATION);
+            rentAlert.setTitle("Property Owned");
+            rentAlert.setHeaderText("Pay Rent! $" + rent);
+            rentAlert.setContentText(player.getName() + " landed on " + property.getOwner().getName() + "'s property (" + property.getName() + "). Pay rent now?");
+
+            Optional<ButtonType> rentResult = rentAlert.showAndWait();
+            if (rentResult.isPresent() && rentResult.get() == ButtonType.OK) {
+                if (player.deductMoney(rent)) {
+                    property.getOwner().addMoney(rent);
+                } else {
+                    // ล้มละลายหากเงินไม่พอจ่ายค่าเช่า
+                    player.addMoney(-player.getMoney());
+                }
+                updatePlayerMoney(player);
+            }
+
+            // 2. Logic Buyout (ถ้าไม่ใช่ Landmark และผู้เล่นมีเงินพอ)
+            if (player.getMoney() > 0 && !property.isLandmark()) {
+                int buyoutPrice = (int)( property.getPrice() * 1.5);
+                if (player.getMoney() >= buyoutPrice) {
+                    Alert buyoutAlert = new Alert(Alert.AlertType.CONFIRMATION);
+                    buyoutAlert.setTitle("Buyout Opportunity");
+                    buyoutAlert.setHeaderText("Buyout " + property.getName() + "?");
+                    buyoutAlert.setContentText("Price: $" + buyoutPrice + ". Do you want to buy it from " + property.getOwner().getName() + "?");
+
+                    Optional<ButtonType> buyoutResult = buyoutAlert.showAndWait();
+                    if (buyoutResult.isPresent() && buyoutResult.get() == ButtonType.OK) {
+                        if (player.deductMoney(buyoutPrice)) {
+                            property.getOwner().addMoney(buyoutPrice);
+                            property.setOwner(player);
+                            property.setLandmark(false);
+                            updateSquareBox(property);
+                            System.out.println("✅ " + player.getName() + " successfully bought out " + property.getName() + "!");
+                        }
+                    }
+                }
+            }
+
+            checkBankruptcy(player);
+            gameController.moveToNextPlayer();
+            updateTurnDisplay(rollButton);
+
+        } else if (property.getOwner() == player) {
+            // ช่องตัวเอง: เสนอให้อัพเกรดเป็น Landmark
+            if (!property.isLandmark()) {
+                showUpgradePropertyDialog(player, property, rollButton);
+            } else {
+                gameController.moveToNextPlayer();
+                updateTurnDisplay(rollButton);
+            }
+
+        } else {
+            // ช่องว่าง: เสนอให้ซื้อ
+            showBuyPropertyDialog(player, property, rollButton);
+        }
+    }
+
+    private void showBuyPropertyDialog(Player player, Property property, Button rollButton) {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Buy Property");
+        alert.setHeaderText("Unowned Property: " + property.getName());
+        alert.setContentText("Price: $" + property.getPrice() + ". Would you like to buy it?");
+
+        Optional<ButtonType> result = alert.showAndWait();
+        if (result.isPresent() && result.get() == ButtonType.OK) {
+            if (player.deductMoney(property.getPrice())) {
+                property.setOwner(player);
+                updateSquareBox(property);
+            } else {
+                showSimpleAlert("Transaction Failed", "You don't have enough money to buy " + property.getName() + "!");
+            }
+            checkBankruptcy(player);
+            updatePlayerMoney(player);
+        }
+
+        gameController.moveToNextPlayer();
+        updateTurnDisplay(rollButton);
+    }
+
+    private void showUpgradePropertyDialog(Player player, Property property, Button rollButton) {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Upgrade Property");
+        alert.setHeaderText("Your Property: " + property.getName());
+        alert.setContentText("Upgrade to Landmark? Cost: $" + property.getUpgradeCost() + ". (Rent x3)");
+
+        Optional<ButtonType> result = alert.showAndWait();
+        if (result.isPresent() && result.get() == ButtonType.OK) {
+            if (player.deductMoney(property.getUpgradeCost())) {
+                property.setLandmark(true);
+                updateSquareBox(property);
+            } else {
+                showSimpleAlert("Transaction Failed", "You don't have enough money to upgrade " + property.getName() + "!");
+            }
+            checkBankruptcy(player);
+            updatePlayerMoney(player);
+        }
+
+        gameController.moveToNextPlayer();
+        updateTurnDisplay(rollButton);
+    }
+
+    private void handleCardAction(Player player, Button rollButton) {
+        Card drawnCard = gameController.getCardManager().drawCard();
+
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Draw Card");
+        alert.setHeaderText("You drew a card!");
+        alert.setContentText("Effect: " + drawnCard.getDescription());
+        alert.showAndWait();
+
+        drawnCard.execute(player, board);
+
+        updatePlayerMoney(player);
+        updatePlayerTokens();
+
+        // หลังจาก Execute Card ต้องมีการตรวจสอบและอัปเดต UI ที่เกี่ยวข้อง
+        checkBankruptcy(player);
+        gameController.moveToNextPlayer();
+        updateTurnDisplay(rollButton);
+    }
+
+    private void handleAirplaneAction(Player player, Button rollButton) {
+        // สร้างรายการช่องทั้งหมดให้เลือก
+        List<Square> allSquares = board.getSquares();
+        List<String> choices = allSquares.stream()
+                .map(s -> "[" + s.getPosition() + "] " + s.getName())
+                .collect(Collectors.toList());
+
+        ChoiceDialog<String> dialog = new ChoiceDialog<>(choices.get(0), choices);
+        dialog.setTitle("Airplane Flight");
+        dialog.setHeaderText("Select your destination to fly to:");
+        dialog.setContentText(player.getName() + ", choose a square:");
+
+        Optional<String> result = dialog.showAndWait();
+
+        if (result.isPresent()) {
+            int targetPosition = Integer.parseInt(result.get().split("]")[0].substring(1));
+
+            // เรียกใช้เมธอดใหม่ใน GameController
+            gameController.handleAirplaneAction(player, targetPosition);
+
+            updatePlayerMoney(player);
+            updatePlayerTokens();
+
+            // Logic ต่อไป: จัดการ action ที่ช่องปลายทาง
+            Square landedSquare = board.getSquare(player.getPosition());
+            if (landedSquare instanceof Property) {
+                // ถ้าลงช่อง Property ต้องไปเข้า Logic ซื้อ/เช่าอีกครั้ง
+                handlePropertyAction(player, (Property) landedSquare, rollButton);
+                return;
+            }
+        } else {
+            showSimpleAlert("Action Required", "You must select a destination to fly.");
+        }
+
+        checkBankruptcy(player);
+        gameController.moveToNextPlayer();
+        updateTurnDisplay(rollButton);
+    }
+
+    private void checkBankruptcy(Player player) {
+        if (player.getMoney() <= 0) {
+            showSimpleAlert("Game Over!", player.getName() + " has gone BANKRUPT! The other player WINS!");
+        }
+    }
+
+    private void showSimpleAlert(String title, String content) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(content);
+        alert.showAndWait();
+    }
+
+    private void updateTurnDisplay(Button rollButton) {
+        Player nextPlayer = gameController.getCurrentPlayer();
+        playerTurnLabel.setText("Turn: " + nextPlayer.getName());
+        rollButton.setDisable(false);
+
+        Color playerColor = (nextPlayer == players.get(0)) ? Color.LIMEGREEN : Color.RED;
+        playerTurnLabel.setStyle("-fx-text-fill: white; -fx-background-color: " + toHexString(playerColor) + "; -fx-padding: 5; -fx-border-radius: 5;");
+    }
+
+    private String toHexString(Color color) {
+        return String.format("#%02X%02X%02X",
+                (int) (color.getRed() * 255),
+                (int) (color.getGreen() * 255),
+                (int) (color.getBlue() * 255));
+    }
+
+    // =========================================================================
+    // *** Existing Methods (Board UI) ***
+    // =========================================================================
+
     public void updatePlayerTokens() {
-        // 1. ลบ Token เก่าออกจาก Parent (StackPane) ที่มันอยู่ก่อน
         for (ImageView token : playerTokens) {
             if (token.getParent() instanceof StackPane) {
-                StackPane currentCell = (StackPane) token.getParent();
-                currentCell.getChildren().remove(token);
+                ((StackPane) token.getParent()).getChildren().remove(token);
             }
         }
 
-        // 2. วาง Token ใหม่ตามตำแหน่งของผู้เล่นปัจจุบัน
         for (int i = 0; i < players.size(); i++) {
             Player player = players.get(i);
             ImageView token = playerTokens.get(i);
@@ -220,14 +460,11 @@ public class GameBoardScreen {
                 StackPane targetCell = getCellFromGrid(row, col);
                 if (targetCell != null) {
                     targetCell.getChildren().add(token);
-                    // จัดตำแหน่ง Token ให้อยู่มุมซ้ายล่าง/ขวาล่างของช่อง
                     StackPane.setAlignment(token, i == 0 ? Pos.BOTTOM_LEFT : Pos.BOTTOM_RIGHT);
                 }
             }
         }
     }
-
-    // --- Helper Methods ---
 
     private StackPane getCellFromGrid(int row, int intcol) {
         for (javafx.scene.Node node : boardGrid.getChildren()) {
@@ -242,7 +479,132 @@ public class GameBoardScreen {
         return null;
     }
 
-    // --- Logic การแปลงตำแหน่ง 1D (0-19) เป็น 2D Grid (Row/Col 0-5) ---
+    private VBox createSquareBox(Square square) {
+        Label title = new Label(square.getName());
+        title.setFont(Font.font("Arial", 10));
+
+        VBox box = new VBox(5, title);
+        box.setAlignment(Pos.CENTER);
+        box.setPrefSize(100, 100);
+
+        updateSquareBoxStyle(box, square);
+
+        box.setBorder(new Border(new BorderStroke(
+                Color.BLACK,
+                BorderStrokeStyle.SOLID,
+                new CornerRadii(10),
+                new BorderWidths(1)
+        )));
+
+        return box;
+    }
+
+    /**
+     * Helper method to set style based on Square type and ownership
+     */
+    private void updateSquareBoxStyle(VBox box, Square square) {
+        String backgroundColor = "#FFFFFF";
+        String borderColor = "#000000";
+
+        if (square.getPosition() == 0) {
+            backgroundColor = "#AAFFAA"; // Go (เขียวอ่อน)
+        } else if (square instanceof JailSquare) {
+            backgroundColor = "#ADD8E6"; // Jail (น้ำเงินพาสเทล)
+        } else if (square instanceof CardSquare) {
+            backgroundColor = "#F08080"; // Card (แดงพาสเทล)
+        } else if (square instanceof AirplaneSquare) {
+            backgroundColor = "#A9A9A9"; // Airport (เทา)
+        } else if (square.getPosition() == 10) {
+            backgroundColor = "#FFFF99"; // Lottery (เหลืองอ่อน)
+        } else if (square.getPosition() == 15) {
+            backgroundColor = "#FFFF99"; // Go To Jail (เหลืองอ่อน)
+        } else if (square instanceof Property) {
+            Property property = (Property) square;
+            if (property.getOwner() != null) {
+                if (property.getOwner() == players.get(0)) {
+                    backgroundColor = "#E6FFE6";
+                    borderColor = "#2E8B57";
+                } else if (players.size() > 1 && property.getOwner() == players.get(1)) {
+                    backgroundColor = "#FFE6E6";
+                    borderColor = "#FF6347";
+                }
+
+                if (property.isLandmark()) {
+                    borderColor = "#FFD700";
+                    box.setBorder(new Border(new BorderStroke(
+                            Color.web(borderColor),
+                            BorderStrokeStyle.SOLID,
+                            new CornerRadii(10),
+                            new BorderWidths(4)
+                    )));
+                } else {
+                    box.setBorder(new Border(new BorderStroke(
+                            Color.web(borderColor),
+                            BorderStrokeStyle.SOLID,
+                            new CornerRadii(10),
+                            new BorderWidths(2)
+                    )));
+                }
+            } else {
+                box.setBorder(new Border(new BorderStroke(
+                        Color.BLACK,
+                        BorderStrokeStyle.SOLID,
+                        new CornerRadii(10),
+                        new BorderWidths(1)
+                )));
+            }
+        }
+
+        box.setStyle("-fx-background-color: " + backgroundColor + ";");
+    }
+
+    private void updateSquareBox(Square square) {
+        int row = getRowForPosition(square.getPosition());
+        int col = getColForPosition(square.getPosition());
+        StackPane cell = getCellFromGrid(row, col);
+
+        if (cell != null && cell.getChildren().get(0) instanceof VBox) {
+            VBox squareBox = (VBox) cell.getChildren().get(0);
+            updateSquareBoxStyle(squareBox, square);
+        }
+    }
+
+
+    private GridPane createBoardGrid() {
+        GridPane grid = new GridPane();
+        grid.setAlignment(Pos.CENTER);
+
+        int dim = 6;
+        for (int row = 0; row < dim; row++) {
+            for (int col = 0; col < dim; col++) {
+                int squareIndex = getIndexFromGrid(row, col, dim);
+                StackPane cell = new StackPane();
+                cell.setPrefSize(100, 100);
+
+                if (squareIndex != -1 && squareIndex < board.getBoardSize()) {
+                    Square square = board.getSquare(squareIndex);
+                    VBox squareBox = createSquareBox(square);
+                    cell.getChildren().add(squareBox);
+                    cell.setAlignment(Pos.CENTER);
+                    cell.setId("square-cell-" + squareIndex);
+                } else {
+                    cell.setBackground(Background.EMPTY);
+                    cell.setBorder(Border.EMPTY);
+                }
+                grid.add(cell, col, row);
+            }
+        }
+        return grid;
+    }
+
+    private int getIndexFromGrid(int row, int col, int dim) {
+        if (row == dim - 1) return dim - 1 - col;
+        if (col == 0 && row >= 1 && row <= 4) return dim - 1 - row + 5;
+        if (row == 0 && col >= 0 && col <= 5) return col + 10;
+        if (col == dim - 1 && row >= 1 && row <= 4) return row + 15;
+        return -1;
+    }
+
     private int getRowForPosition(int squareIndex) {
         int dim = 6;
         if (squareIndex >= 0 && squareIndex <= 5) return dim - 1;
@@ -260,14 +622,12 @@ public class GameBoardScreen {
         if (squareIndex >= 16 && squareIndex <= 19) return dim - 1;
         return -1;
     }
-    // --- จบ Logic การแปลงตำแหน่ง ---
 
     private ImageView createCharacterImageView(int index) {
         ImageView imageView = new ImageView();
         try {
             String fileName = CHARACTER_FILES[index];
             String fullPath = RESOURCE_PATH + fileName;
-
             Image image = new Image(getClass().getResourceAsStream(fullPath));
             imageView.setImage(image);
             imageView.setFitWidth(50);
@@ -320,91 +680,5 @@ public class GameBoardScreen {
         } else if (players.size() > 1 && player == players.get(1)) {
             player2MoneyLabel.setText("Money: $" + player.getMoney());
         }
-    }
-
-    private VBox createSquareBox(Square square) {
-        Label title = new Label(square.getName());
-        title.setFont(Font.font("Arial", 10));
-
-        VBox box = new VBox(5, title);
-        box.setAlignment(Pos.CENTER);
-        box.setPrefSize(100, 100);
-
-        String backgroundColor = "#FFFFFF"; // สีเริ่มต้น (ขาว)
-
-        // *** ปรับปรุง Logic การกำหนดสีพื้นหลัง ***
-
-        if (square.getPosition() == 0) {
-            // Go
-            backgroundColor = "#AAFFAA"; // เขียวอ่อน
-        } else if (square instanceof JailSquare) {
-            // JailSquare (ตำแหน่ง 5) -> สีน้ำเงินพาสเทล
-            backgroundColor = "#ADD8E6"; // น้ำเงินอ่อน (Light Blue)
-        } else if (square.getPosition() == 10 || square.getPosition() == 15) {
-            // Free Parking (10) และ Go to Jail (15) -> มุมอื่น ๆ
-            backgroundColor = "#FFFF99"; // เหลืองอ่อน
-        } else {
-            // ช่องอื่น ๆ ทั่วไป
-            backgroundColor = "#FFFFFF";
-        }
-
-        box.setStyle("-fx-background-color: " + backgroundColor + ";");
-
-        box.setBorder(new Border(new BorderStroke(
-                Color.BLACK,
-                BorderStrokeStyle.SOLID,
-                new CornerRadii(10),
-                new BorderWidths(1)
-        )));
-
-        return box;
-    }
-
-    private GridPane createBoardGrid() {
-        GridPane grid = new GridPane();
-        grid.setAlignment(Pos.CENTER);
-
-        int boardSize = board.getBoardSize();
-        int dim = 6;
-
-        for (int row = 0; row < dim; row++) {
-            for (int col = 0; col < dim; col++) {
-
-                int squareIndex = -1;
-
-                if (row == dim - 1) {
-                    squareIndex = dim - 1 - col;
-                }
-                else if (col == 0 && row >= 1 && row <= 4) {
-                    squareIndex = dim - 1 - row + 5;
-                }
-                else if (row == 0 && col >= 0 && col <= 5) {
-                    squareIndex = col + 10;
-                }
-                else if (col == dim - 1 && row >= 1 && row <= 4) {
-                    squareIndex = row + 15;
-                }
-
-                StackPane cell = new StackPane();
-                cell.setPrefSize(100, 100);
-
-                if (squareIndex != -1 && squareIndex < boardSize) {
-                    Square square = board.getSquare(squareIndex);
-                    VBox squareBox = createSquareBox(square);
-                    cell.getChildren().add(squareBox);
-                    cell.setAlignment(Pos.CENTER);
-
-                    cell.setId("square-cell-" + squareIndex);
-
-                } else {
-                    cell.setBackground(Background.EMPTY);
-                    cell.setBorder(Border.EMPTY);
-                }
-
-                grid.add(cell, col, row);
-            }
-        }
-
-        return grid;
     }
 }

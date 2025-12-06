@@ -30,15 +30,23 @@ public class Player {
     // --- Actions ---
     public void addMoney(int amount) {
         this.money += amount;
+        System.out.println("💵 " + this.name + " received $" + amount + ". New Balance: $" + this.money); // <--- เพิ่ม LOG
     }
 
     public boolean deductMoney(int amount) {
         if (this.money >= amount) {
             this.money -= amount;
+            System.out.println("💸 " + this.name + " paid $" + amount + ". New Balance: $" + this.money); // <--- เพิ่ม LOG
             return true;
         }
-        // ไม่ต้องจัดการล้มละลายที่นี่ GameController จะจัดการเอง
+        // เงินไม่พอ (Logic ล้มละลายอยู่ใน GameController)
         return false;
+    }
+
+    public void goToJail() {
+        this.inJail = true; // <--- ต้องแน่ใจว่าบรรทัดนี้ทำงาน
+        this.position = 5; // ตำแหน่งคุก (Position 5)
+        System.out.println(name + " is going to Jail!");
     }
 
     /**
@@ -62,12 +70,11 @@ public class Player {
         this.position = newPosition % SMALL_BOARD_SIZE;
     }
 
-    public void goToJail() {
-        this.inJail = true;
-        this.position = 5; // ตำแหน่ง Jail ในกระดาน 20 ช่อง
-    }
-
     public void releaseFromJail() {
         this.inJail = false;
+    }
+
+    public void setInJail(boolean inJail) {
+        this.inJail = inJail;
     }
 }

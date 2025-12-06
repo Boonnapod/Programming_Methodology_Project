@@ -1,11 +1,8 @@
 package game;
 
-
 import model.Card;
 import model.Player;
-import model.cards.MoveToOpponentBestPropertyCard;
-import model.cards.ReceiveMoneyCard;
-import model.cards.SkipTurnCard;
+import model.cards.*;
 
 import java.util.ArrayList;
 import java.util.Collections;
