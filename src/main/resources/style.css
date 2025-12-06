@@ -1,100 +1,93 @@
-/*
- * ไฟล์: style.css
- * วางไว้ในโฟลเดอร์ resources/
- */
+/* =======================================
+ * GLOBAL STYLES (สำหรับทุกหน้าจอ)
+ * ======================================= */
 
-/* ====================================
- * การตั้งค่าพื้นฐานของเกม
- * ==================================== */
-.root {
-    /* กำหนดฟอนต์หลักของแอปพลิเคชัน (ถ้ามีฟอนต์ในเครื่อง) */
-    -fx-font-family: "Arial", sans-serif;
-    -fx-background-color: #ECECEC; /* สีพื้นหลังอ่อนๆ */
+/* 1. พื้นหลังหลักสำหรับ BorderPane/VBox ใน GameMenu, CharacterSelect, GameBoard */
+.root-background {
+    -fx-background-color: #f0f0f0; /* สีเทาอ่อน */
 }
 
-/* พื้นหลังของ GameBoardScreen */
+/* =======================================
+ * MENU & BUTTON STYLES
+ * ======================================= */
+
+/* 2. สไตล์สำหรับปุ่มหลัก (ใช้ใน GameMenu และ CharacterSelect) */
+.menu-button {
+    -fx-background-color: #4CAF50; /* สีเขียวหลัก */
+    -fx-text-fill: white;
+    -fx-font-size: 20px;
+    -fx-padding: 15px 30px;
+    -fx-background-radius: 8px; /* มุมโค้งมน */
+    -fx-cursor: hand; /* เปลี่ยน Cursor เมื่อชี้ */
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.3), 5, 0.0, 0, 3); /* เงาเล็กน้อย */
+}
+
+/* สไตล์เมื่อนำเมาส์ไปชี้ */
+.menu-button:hover {
+    -fx-background-color: #45a049; /* สีเขียวเข้มขึ้น */
+}
+
+.exit-button {
+    -fx-background-color: #ff2e2e; /* สีเขียวหลัก */
+    -fx-text-fill: white;
+    -fx-font-size: 20px;
+    -fx-padding: 15px 30px;
+    -fx-background-radius: 8px; /* มุมโค้งมน */
+    -fx-cursor: hand; /* เปลี่ยน Cursor เมื่อชี้ */
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.3), 5, 0.0, 0, 3); /* เงาเล็กน้อย */
+}
+
+/* สไตล์เมื่อนำเมาส์ไปชี้ */
+.exit-button:hover {
+    -fx-background-color: #ff4d4d; /* สีเขียวเข้มขึ้น */
+}
+
+/* =======================================
+ * GAME BOARD STYLES
+ * ======================================= */
+
+/* 3. สไตล์สำหรับพื้นหลังของ GameBoardScreen (ใช้เหมือน .root-background เพื่อความสอดคล้องกัน) */
 .game-background {
-    -fx-background-color: #388E3C; /* สีเขียวเข้มคล้ายผืนหญ้า (Monopoly Green) */
+    -fx-background-color: #f0f0f0;
 }
 
-/* ====================================
- * แผงแสดงผลผู้เล่น (Player Panel)
- * ==================================== */
-.player-panel {
-    /* ใช้สำหรับ VBox ที่สร้างโดย createPlayerPanel() หากมีการเพิ่ม style class เข้าไป */
-    -fx-background-radius: 5;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 10, 0.5, 0, 0);
-}
-
-.label {
-    /* ตั้งค่า Label ทั่วไป */
-    -fx-text-fill: #333333;
-}
-
-/* ====================================
- * กระดานเกม (GridPane)
- * ==================================== */
-.board-grid {
-    /* จัดการเส้นแบ่งช่องกระดาน */
-    -fx-border-color: #000000;
-    -fx-border-width: 2;
-    -fx-grid-lines-visible: true;
-    -fx-background-color: #FFFFFF; /* พื้นหลังตรงกลาง Grid */
-}
-
-/* ช่องกระดานแต่ละช่อง (SquareBox) */
-/* เนื่องจาก createSquareBox ใช้ inline style (setStyle) ใน Java
-   สำหรับสีพื้นหลังของช่อง (Go, Jail, Property) เราจะตั้งค่าแค่พื้นฐานที่นี่ */
-.square-box {
-    -fx-border-color: #CCCCCC;
-    -fx-border-width: 1;
-    -fx-padding: 5;
-}
-
-/* ====================================
- * ปุ่ม (Buttons)
- * ==================================== */
-.button {
-    -fx-background-color: #FF9800; /* สีส้ม */
-    -fx-text-fill: white;
-    -fx-font-weight: bold;
-    -fx-padding: 8 15;
-    -fx-background-radius: 3;
-    -fx-cursor: hand;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 5, 0.0, 0, 1);
-}
-
-.button:hover {
-    -fx-background-color: #F57C00; /* สีส้มเข้มขึ้นเมื่อ Hover */
-}
-
-/* ปุ่มทอยลูกเต๋าโดยเฉพาะ */
+/* 4. สไตล์สำหรับปุ่ม Roll Dice */
 #roll-button {
-    /* หากคุณใช้ n.setId("roll-button"); ใน Java */
-    -fx-background-color: #E53935; /* สีแดง */
+    -fx-background-color: #FF5722; /* สีส้ม */
     -fx-text-fill: white;
-    -fx-font-size: 28px;
-    -fx-min-width: 150px;
-    -fx-min-height: 150px;
-    -fx-background-radius: 100%; /* ทำให้เป็นปุ่มกลม */
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 150; /* วงกลม */
+    -fx-border-color: #D84315;
+    -fx-border-width: 4px;
+    -fx-border-radius: 150;
+    -fx-cursor: hand;
+    -fx-effect: innershadow(gaussian, rgba(0,0,0,0.5), 10, 0.0, 0, 0);
 }
 
 #roll-button:hover {
-    -fx-background-color: #D32F2F;
+    -fx-background-color: #E64A19;
 }
 
-/* ====================================
- * Character Select Screen
- * ==================================== */
-/* สไตล์สำหรับปุ่มควบคุมเลือกตัวละคร (< และ >) */
-.h-box .button {
-    -fx-background-color: #4CAF50;
-    -fx-text-fill: white;
-    -fx-font-size: 18px;
-    -fx-padding: 5 10;
-    -fx-background-radius: 5;
+#roll-button:disabled {
+    -fx-background-color: #bdbdbd; /* สีเทาเมื่อกดไม่ได้ */
+    -fx-text-fill: #616161;
 }
 
-.h-box .button:hover {
-    -fx-background-color: #388E3C;
+/* =======================================
+ * CHARACTER SELECT STYLES (Optional)
+ * ======================================= */
+
+/* สไตล์สำหรับ Image/VBox ที่ใช้เลือกตัวละคร (ถ้ามี) */
+.character-box {
+    -fx-background-color: white;
+    -fx-border-color: #cccccc;
+    -fx-border-width: 2px;
+    -fx-padding: 10px;
+    -fx-background-radius: 10px;
+}
+
+.character-box:hover {
+    -fx-border-color: #4CAF50;
+    -fx-effect: dropshadow(gaussian, #4CAF50, 10, 0.0, 0, 0);
 }

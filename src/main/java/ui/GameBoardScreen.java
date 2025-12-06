@@ -1,10 +1,13 @@
-package ui; // เปลี่ยนเป็น Package ui
+package ui;
 
-import game.GameController; // เปลี่ยน Import
-import model.Board; // เปลี่ยน Import
-import model.Player; // เปลี่ยน Import
-import model.Square; // เปลี่ยน Import
-// Imports for JavaFX UI
+import game.GameController;
+import game.Dice;
+import model.Board;
+import model.JailSquare;
+import model.Player;
+import model.Square;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -12,32 +15,18 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.layout.Background;
-import javafx.scene.layout.BackgroundFill;
-import javafx.scene.layout.Border;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.BorderStroke;
-import javafx.scene.layout.BorderStrokeStyle;
-import javafx.scene.layout.BorderWidths;
-import javafx.scene.layout.CornerRadii;
-import javafx.scene.layout.GridPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.StackPane;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
-import javafx.scene.layout.Pane;
+import javafx.util.Duration;
+import javafx.scene.effect.DropShadow; // *** NEW IMPORT ***
 
 import java.util.List;
 import java.util.ArrayList;
 
-// (สมมติว่า Main.java อยู่ใน Package ที่ไม่มีชื่อ หรือมี Class ที่เข้าถึงได้โดยตรง เช่น ui.Main)
-// หาก Main.java อยู่ใน Package อื่น เช่น 'main', คุณอาจต้องเปลี่ยน Main เป็น main.Main
-// ในโค้ดนี้จะใช้ Main.WIDTH และ Main.HEIGHT โดยสมมติว่า Main Class อยู่ในขอบเขตการเข้าถึง
-// หาก Main.java อยู่ใน package "main" ให้เปลี่ยนเป็น import main.Main; และใช้ main.Main.WIDTH
-
+// สมมติว่า Main Class อยู่ในขอบเขตการเข้าถึงและมี static final WIDTH/HEIGHT
 public class GameBoardScreen {
     private final Stage primaryStage;
     private final GameController gameController;
@@ -48,7 +37,6 @@ public class GameBoardScreen {
     private Label player1MoneyLabel;
     private Label player2MoneyLabel;
 
-    // *** สำหรับจัดการ Token บนกระดาน ***
     private final List<ImageView> playerTokens;
     private final GridPane boardGrid;
 
@@ -56,6 +44,7 @@ public class GameBoardScreen {
             "character_01.png", "character_02.png", "character_03.png"
     };
     private static final String RESOURCE_PATH = "/Character/";
+    private static final int MOVEMENT_DELAY_MS = 300; // ความเร็วในการเดินต่อช่อง (0.3 วินาที)
 
     public GameBoardScreen(Stage primaryStage, GameController gameController, List<Player> players, List<Integer> selectedCharIndices) {
         this.primaryStage = primaryStage;
@@ -69,65 +58,69 @@ public class GameBoardScreen {
         initializePlayerTokens();
     }
 
-    /**
-     * สร้างและจัดเก็บ ImageView สำหรับผู้เล่นแต่ละคน
-     */
     private void initializePlayerTokens() {
+        // กำหนดสีเงาสำหรับผู้เล่น 1 (index 0) และ ผู้เล่น 2 (index 1)
+        Color[] shadowColors = {Color.LIMEGREEN, Color.RED}; // เขียวสำหรับ P1, แดงสำหรับ P2
+
         for (int i = 0; i < players.size(); i++) {
             ImageView token = createCharacterImageView(selectedCharIndices.get(i));
             token.setFitWidth(30);
             token.setFitHeight(30);
             token.setId("player-token-" + i);
+
+            // *** ADD DropShadow Effect ***
+            if (i < shadowColors.length) {
+                DropShadow dropShadow = new DropShadow();
+                dropShadow.setColor(shadowColors[i]); // ใช้สีตาม index
+                dropShadow.setRadius(8.0); // ปรับรัศมี
+                dropShadow.setSpread(0.4); // ปรับความกระจายเงา
+                dropShadow.setOffsetX(0);
+                dropShadow.setOffsetY(0);
+                token.setEffect(dropShadow);
+            }
+            // *** END DropShadow Effect ***
+
             playerTokens.add(token);
         }
     }
 
-    /**
-     * สร้าง Scene หลักสำหรับกระดานเกม
-     */
     public Scene createGameScene() {
         BorderPane root = new BorderPane();
+        // บรรทัดนี้จะอ้างถึงสไตล์ใน style.css ซึ่งคุณควรเพิ่ม .game-background { -fx-background-color: #f0f0f0; } เข้าไป
         root.getStyleClass().add("game-background");
 
-        // 3. สร้างปุ่มทอยลูกเต๋า (Roll Button)
         Button rollButton = new Button("Roll Dice!");
         rollButton.setFont(Font.font("Arial", FontWeight.BOLD, 24));
         rollButton.setMinWidth(150);
         rollButton.setMinHeight(150);
         rollButton.setId("roll-button");
 
-        // เชื่อมต่อปุ่ม Roll กับ GameController
+        // *** เปลี่ยน Logic ให้เรียกเมธอด Animation ***
         rollButton.setOnAction(e -> {
-            Player activePlayer = gameController.takeNormalTurn();
-            updatePlayerMoney(activePlayer);
-            updatePlayerTokens(); // <-- อัปเดต Token
-            // ลบการใช้ System.out.println() เพื่อให้โค้ดสะอาดขึ้น
+            // ปิดปุ่ม Roll เพื่อป้องกันการคลิกซ้ำระหว่างแอนิเมชัน
+            rollButton.setDisable(true);
+            startTurnAndAnimate(rollButton);
         });
 
-        // 4. สร้าง StackPane เพื่อวางปุ่มทับกระดานตรงกลาง
         StackPane centerStack = new StackPane(boardGrid, rollButton);
-        // *** ใช้ Main.WIDTH และ Main.HEIGHT โดยสมมติว่า Main Class อยู่ในขอบเขตการเข้าถึง ***
-        centerStack.setMaxWidth(Main.WIDTH - 100);
-        centerStack.setMaxHeight(Main.HEIGHT - 100);
-
         root.setCenter(centerStack);
 
-        // 5. วาง Player Panels (HBox)
+        // วาง Player Panels (บนซ้าย & ล่างขวา)
         if (players.size() >= 1) {
             HBox player1Panel = createPlayerPanel(players.get(0), selectedCharIndices.get(0), true);
-            root.setTop(player1Panel);
+            root.setTop(player1Panel); // <-- ด้านบน
             BorderPane.setAlignment(player1Panel, Pos.TOP_LEFT);
             BorderPane.setMargin(player1Panel, new Insets(10));
         }
 
         if (players.size() >= 2) {
             HBox player2Panel = createPlayerPanel(players.get(1), selectedCharIndices.get(1), false);
-            root.setBottom(player2Panel);
+            root.setBottom(player2Panel); // <-- ด้านล่าง
             BorderPane.setAlignment(player2Panel, Pos.BOTTOM_RIGHT);
             BorderPane.setMargin(player2Panel, new Insets(10));
         }
 
-        // *** เรียกครั้งแรกเพื่อวาง Token ที่ช่อง Go (0) ***
+        // เรียกครั้งแรกเพื่อวาง Token ที่ช่อง Go (0)
         updatePlayerTokens();
 
         Scene gameScene = new Scene(root, Main.WIDTH, Main.HEIGHT);
@@ -135,14 +128,79 @@ public class GameBoardScreen {
         return gameScene;
     }
 
+    /**
+     * เริ่มเทิร์น ทอยลูกเต๋า และจัดการแอนิเมชัน
+     */
+    private void startTurnAndAnimate(Button rollButton) {
+        // 1. ทอยลูกเต๋า
+        Dice dice = gameController.getDice();
+        int steps = dice.roll();
+
+        Player activePlayer = gameController.getPlayers().get(gameController.getCurrentPlayerIndex());
+        System.out.println(activePlayer.getName() + " rolled a " + steps);
+
+        // 2. เริ่มแอนิเมชันการเดิน
+        animateMovement(activePlayer, steps, rollButton);
+    }
 
     /**
-     * แก้ไขการลบ Token ออกจาก Parent เดิมก่อน
+     * สร้าง Timeline สำหรับเดิน Token ทีละช่อง
+     */
+    private void animateMovement(Player player, int steps, Button rollButton) {
+        Timeline timeline = new Timeline();
+        int boardSize = gameController.getBoard().getBoardSize();
+
+        for (int i = 1; i <= steps; i++) {
+            final int step = i;
+
+            // KeyFrame แต่ละอันคือการเดิน 1 ช่อง
+            KeyFrame keyFrame = new KeyFrame(
+                    Duration.millis(MOVEMENT_DELAY_MS * step),
+                    event -> {
+
+                        int oldPosition = player.getPosition();
+                        int newPosition = (oldPosition + 1) % boardSize;
+
+                        // *** ใช้ warp() เพื่อย้ายตำแหน่งโดยไม่เรียก Logic ผ่าน Go ของ Player.move() ***
+                        player.warp(newPosition);
+
+                        // ตรวจสอบการผ่าน Go (รับเงิน $200) ด้วยตัวเอง
+                        if (newPosition == 0 && oldPosition != 0) {
+                            player.addMoney(200);
+                            updatePlayerMoney(player);
+                            System.out.println(player.getName() + " passed Go! Collected $200.");
+                        }
+
+                        // อัปเดต UI Token
+                        updatePlayerTokens();
+                    }
+            );
+            timeline.getKeyFrames().add(keyFrame);
+        }
+
+        // KeyFrame สุดท้าย: เมื่อแอนิเมชั่นจบ
+        timeline.setOnFinished(event -> {
+            // 3. เรียก Logic การลงช่องสุดท้าย (LandOn) และจบเทิร์น
+            gameController.finalizeTurnLogic(player);
+
+            // Final UI updates
+            updatePlayerMoney(player);
+            updatePlayerTokens();
+
+            // 4. เปิดปุ่ม Roll กลับมา
+            rollButton.setDisable(false);
+        });
+
+        timeline.play();
+    }
+
+
+    /**
+     * แก้ไขการลบ Token ออกจาก Parent เดิมก่อนเพื่อป้องกัน duplicate children added
      */
     public void updatePlayerTokens() {
         // 1. ลบ Token เก่าออกจาก Parent (StackPane) ที่มันอยู่ก่อน
         for (ImageView token : playerTokens) {
-            // ตรวจสอบว่า Token มี Parent และ Parent เป็น StackPane
             if (token.getParent() instanceof StackPane) {
                 StackPane currentCell = (StackPane) token.getParent();
                 currentCell.getChildren().remove(token);
@@ -162,17 +220,15 @@ public class GameBoardScreen {
                 StackPane targetCell = getCellFromGrid(row, col);
                 if (targetCell != null) {
                     targetCell.getChildren().add(token);
-
-                    // จัดตำแหน่งภายใน StackPane
+                    // จัดตำแหน่ง Token ให้อยู่มุมซ้ายล่าง/ขวาล่างของช่อง
                     StackPane.setAlignment(token, i == 0 ? Pos.BOTTOM_LEFT : Pos.BOTTOM_RIGHT);
                 }
             }
         }
     }
 
-    /**
-     * ค้นหา StackPane (Cell) จาก Row และ Col
-     */
+    // --- Helper Methods ---
+
     private StackPane getCellFromGrid(int row, int intcol) {
         for (javafx.scene.Node node : boardGrid.getChildren()) {
             Integer nodeCol = GridPane.getColumnIndex(node);
@@ -212,7 +268,6 @@ public class GameBoardScreen {
             String fileName = CHARACTER_FILES[index];
             String fullPath = RESOURCE_PATH + fileName;
 
-            // ใช้ Image(getClass().getResourceAsStream(fullPath)) เพื่อโหลดจาก resources
             Image image = new Image(getClass().getResourceAsStream(fullPath));
             imageView.setImage(image);
             imageView.setFitWidth(50);
@@ -226,7 +281,6 @@ public class GameBoardScreen {
 
     private HBox createPlayerPanel(Player player, int charIndex, boolean isPlayer1) {
 
-        // สร้าง ImageView สำหรับแสดงรูปตัวละครใน Panel
         ImageView charImageView = createCharacterImageView(charIndex);
         charImageView.setFitWidth(50);
 
@@ -276,9 +330,25 @@ public class GameBoardScreen {
         box.setAlignment(Pos.CENTER);
         box.setPrefSize(100, 100);
 
-        if (square.getPosition() == 0) box.setStyle("-fx-background-color: #AAFFAA;");
-        else if (square.getPosition() == 5 || square.getPosition() == 10 || square.getPosition() == 15) box.setStyle("-fx-background-color: #FFFF99;");
-        else box.setStyle("-fx-background-color: #FFFFFF;");
+        String backgroundColor = "#FFFFFF"; // สีเริ่มต้น (ขาว)
+
+        // *** ปรับปรุง Logic การกำหนดสีพื้นหลัง ***
+
+        if (square.getPosition() == 0) {
+            // Go
+            backgroundColor = "#AAFFAA"; // เขียวอ่อน
+        } else if (square instanceof JailSquare) {
+            // JailSquare (ตำแหน่ง 5) -> สีน้ำเงินพาสเทล
+            backgroundColor = "#ADD8E6"; // น้ำเงินอ่อน (Light Blue)
+        } else if (square.getPosition() == 10 || square.getPosition() == 15) {
+            // Free Parking (10) และ Go to Jail (15) -> มุมอื่น ๆ
+            backgroundColor = "#FFFF99"; // เหลืองอ่อน
+        } else {
+            // ช่องอื่น ๆ ทั่วไป
+            backgroundColor = "#FFFFFF";
+        }
+
+        box.setStyle("-fx-background-color: " + backgroundColor + ";");
 
         box.setBorder(new Border(new BorderStroke(
                 Color.BLACK,
@@ -290,9 +360,6 @@ public class GameBoardScreen {
         return box;
     }
 
-    /**
-     * สร้าง Grid Layout สำหรับกระดาน 6x6 โดยใช้ StackPane เป็น Cell Container หลัก
-     */
     private GridPane createBoardGrid() {
         GridPane grid = new GridPane();
         grid.setAlignment(Pos.CENTER);
@@ -305,7 +372,6 @@ public class GameBoardScreen {
 
                 int squareIndex = -1;
 
-                // Logic คำนวณ Index ของช่องกระดาน 20 ช่อง
                 if (row == dim - 1) {
                     squareIndex = dim - 1 - col;
                 }

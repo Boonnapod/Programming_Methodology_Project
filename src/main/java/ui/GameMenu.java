@@ -1,6 +1,6 @@
 package ui;
 
-import game.GameController; // *** NEW IMPORT ***
+import game.GameController;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -11,6 +11,7 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight; // *** NEW IMPORT ***
 import javafx.stage.Stage;
 
 public class GameMenu {
@@ -28,7 +29,8 @@ public class GameMenu {
         try {
             Image coverImage = new Image(getClass().getResourceAsStream(COVER_IMAGE_PATH));
             coverImageView = new ImageView(coverImage);
-            coverImageView.setFitWidth(Main.WIDTH * 0.9);
+            // ปรับขนาดภาพให้เล็กลงเล็กน้อย เพื่อให้พอดีกับหน้าจอเมื่อมีปุ่มอยู่ด้านล่าง
+            coverImageView.setFitWidth(Main.WIDTH * 0.7);
             coverImageView.setPreserveRatio(true);
         } catch (Exception e) {
             System.err.println("!!! ERROR: ไม่พบไฟล์ภาพปก: " + COVER_IMAGE_PATH);
@@ -36,22 +38,26 @@ public class GameMenu {
 
         // 2. UI Components
         Label titleLabel = new Label("เกมเศรษฐี");
-        titleLabel.setFont(new Font("Arial", 48));
+        titleLabel.setFont(Font.font("Arial", FontWeight.BOLD, 48)); // ใช้ FontWeight.BOLD
+        titleLabel.setStyle("-fx-text-fill: #333333;"); // ตั้งค่าสีข้อความ
 
         Button startGameButton = new Button("เริ่มเกม");
-        startGameButton.setMinWidth(200);
-        startGameButton.setMinHeight(40);
+        startGameButton.setMinWidth(250);
+        startGameButton.setMinHeight(50);
+        startGameButton.getStyleClass().add("menu-button"); // *** ADD STYLE CLASS ***
 
-        Button exitButton = new Button("ออกเกม");
-        exitButton.setMinWidth(200);
-        exitButton.setMinHeight(40);
+        Button exitButton = new Button("ออก");
+        exitButton.setMinWidth(250);
+        exitButton.setMinHeight(50);
+        exitButton.getStyleClass().add("exit-button"); // *** ADD STYLE CLASS ***
 
         // Event Handling (สำคัญ: สร้าง GameController และส่งไป)
         startGameButton.setOnAction(e -> {
-            // *** 1. สร้าง GameController ที่นี่ ***
+            // 1. สร้าง GameController ที่นี่
             GameController gameController = new GameController();
 
-            // *** 2. ส่ง GameController ไปยัง CharacterSelectScreen ***
+            // 2. ส่ง GameController ไปยัง CharacterSelectScreen
+            // *** การเรียก CONSTRUCTOR ที่ถูกต้อง (แก้ไขแล้ว) ***
             CharacterSelectScreen selectScreen = new CharacterSelectScreen(
                     primaryStage,
                     gameController
@@ -70,16 +76,19 @@ public class GameMenu {
         menuLayout.setAlignment(Pos.CENTER);
         menuLayout.setPadding(new Insets(20));
 
+        menuLayout.getChildren().add(titleLabel);
         if (coverImageView != null) {
             menuLayout.getChildren().add(coverImageView);
-        } else {
-            menuLayout.getChildren().add(titleLabel);
         }
 
         menuLayout.getChildren().addAll(startGameButton, exitButton);
 
-        // 4. สร้าง Scene
+        // 4. สร้าง Scene และใช้ Style
+        menuLayout.getStyleClass().add("root-background"); // *** ADD BACKGROUND STYLE (สีเทา) ***
+
         Scene menuScene = new Scene(menuLayout, Main.WIDTH, Main.HEIGHT);
+        menuScene.getStylesheets().add(getClass().getResource("/style.css").toExternalForm());
+
         return menuScene;
     }
 }
