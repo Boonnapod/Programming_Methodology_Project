@@ -22,7 +22,7 @@ public class Board {
 
         // 2. กำหนดช่องสำคัญโดยใช้ set(index, element)
         squares.set(0, new GoSquare(0)); // 0: Go
-        squares.set(5, new JailSquare("Jail (Just Visiting)", 5)); // 5: Jail (มุม)
+        squares.set(5, new JailSquare("Jail", 5)); // 5: Jail (มุม)
 
         // **********************************************
         // ******* LOGIC แก้ไขสำหรับตำแหน่ง 10 (Lottery) *******
