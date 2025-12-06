@@ -40,33 +40,37 @@ public class Board {
         // **********************************************
 
         // 3. เพิ่มช่องการ์ด (CardSquare) และช่องเครื่องบิน (AirplaneSquare)
-        squares.set(3, new CardSquare("Chance 1", 3)); // ช่องการ์ด 1
-        squares.set(8, new CardSquare("Community Chest", 8)); // ช่องการ์ด 2
-        squares.set(13, new CardSquare("Chance 2", 13)); // ช่องการ์ด 3
+        squares.set(3, new CardSquare("Mystery Card", 3)); // ช่องการ์ด 1
+        squares.set(8, new CardSquare("Mystery Card", 8)); // ช่องการ์ด 2
+        squares.set(13, new CardSquare("Mystery Card", 13)); // ช่องการ์ด 3
 
         // Note: index 15 ควรเป็น GoToJail ตามโค้ดเดิม แต่ใช้ Airport ตามที่คุณให้มา
         squares.set(15, new AirplaneSquare("Airport", 15));
 
         // 4. ตัวอย่าง Property และ Tax
-        squares.set(1, new Property("Brown Street", 1, 60, 2));
+
         squares.set(4, new Square("Income Tax", 4) { // ตำแหน่ง 4
             @Override
             public void landOn(Player player) {
-                System.out.println("Income Tax: Player pays $100.");
-                player.deductMoney(100);
+                System.out.println("Income Tax: Player pays $300.");
+                player.deductMoney(300);
             }
         });
-        squares.set(6, new Property("Light Blue Road", 6, 60, 15));
-        squares.set(11, new Property("Orange Plaza", 11, 100, 20));
-        squares.set(16, new Property("Yellow Lane", 16, 100, 40));
-        squares.set(19, new Property("Dark Blue Hotel", 19, 200, 65));
+        squares.set(1, new Property("UDONTHANI", 1, 200, 100));
+        squares.set(2, new Property("CHAIYAPHUM", 2, 220, 110));
+        squares.set(6, new Property("BURIRAM", 6, 180, 90));
+        squares.set(7, new Property("CHAI NAT", 7, 260, 130));
 
-        // 5. เติมช่องที่เหลือ
-        for (int i = 0; i < BOARD_SIZE; i++) {
-            if (squares.get(i) == null) {
-                squares.set(i, new Property("Square " + i, i, 80, 10));
-            }
-        }
+        squares.set(9, new Property("KRABI", 9, 240, 120));
+        squares.set(11, new Property("LOPBURI", 11, 180, 90));
+        squares.set(12, new Property("PATTAYA", 12, 210, 105));
+        squares.set(14, new Property("PATTANI", 14, 250, 125));
+
+        squares.set(16, new Property("AYUTTHAYA", 16, 250, 125));
+        squares.set(17, new Property("SARABURI", 17, 270, 135));
+        squares.set(18, new Property("YALA", 18, 280, 140));
+        squares.set(19, new Property("BANGKOK", 19, 300, 150));
+
     }
 
     public Square getSquare(int index) {

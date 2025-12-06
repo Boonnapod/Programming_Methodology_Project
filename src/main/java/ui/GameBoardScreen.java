@@ -238,7 +238,7 @@ public class GameBoardScreen {
 
                         // ตรวจสอบการผ่าน Go (รับเงิน $200) ด้วยตัวเอง
                         if (newPosition == 0 && oldPosition != 0) {
-                            player.addMoney(200);
+                            player.addMoney(100);
                             updatePlayerMoney(player);
                             System.out.println(player.getName() + " passed Go! Collected $200.");
                         }

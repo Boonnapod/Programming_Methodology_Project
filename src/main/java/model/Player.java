@@ -7,7 +7,7 @@ public class Player {
     private boolean inJail;
     private int skipTurns;
     private static final int SMALL_BOARD_SIZE = 20;
-    private static final int INITIAL_MONEY = 1500;
+    private static final int INITIAL_MONEY = 500;
 
     public Player(String name, int initialMoney) {
         this.name = name;
@@ -72,7 +72,7 @@ public class Player {
 
         // ตรวจสอบการผ่าน Go
         if (oldPosition + steps >= SMALL_BOARD_SIZE) {
-            addMoney(200);
+            addMoney(100);
         }
     }
 
