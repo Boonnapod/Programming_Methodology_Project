@@ -1,4 +1,6 @@
-package model;
+package model.squares;
+
+import model.Player;
 
 import java.util.Random;
 

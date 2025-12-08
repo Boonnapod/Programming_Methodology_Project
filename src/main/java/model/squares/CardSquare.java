@@ -1,4 +1,6 @@
-package model;
+package model.squares;
+
+import model.Player;
 
 public class CardSquare extends Square {
 

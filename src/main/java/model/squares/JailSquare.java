@@ -1,4 +1,6 @@
-package model;
+package model.squares;
+
+import model.Player;
 
 public class JailSquare extends Square {
     public JailSquare(String name, int position) {

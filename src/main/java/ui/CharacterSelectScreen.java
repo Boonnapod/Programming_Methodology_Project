@@ -7,11 +7,13 @@ import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.effect.DropShadow;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
@@ -33,150 +35,137 @@ public class CharacterSelectScreen {
     private int player1Index = 0;
     private int player2Index = 0;
 
-    private ImageView player1ImageView = new ImageView();
-    private ImageView player2ImageView = new ImageView();
+    private final ImageView player1ImageView = new ImageView();
+    private final ImageView player2ImageView = new ImageView();
 
     public CharacterSelectScreen(Stage primaryStage, GameController gameController) {
         this.primaryStage = primaryStage;
         this.gameController = gameController;
-
-        // ปรับขนาดภาพตัวละครให้ใหญ่ขึ้นเล็กน้อย
-        player1ImageView.setFitWidth(180);
-        player1ImageView.setPreserveRatio(true);
-        player2ImageView.setFitWidth(180);
-        player2ImageView.setPreserveRatio(true);
-
-        // โหลดภาพเริ่มต้น
-        updateCharacterImage(player1ImageView, player1Index);
-        updateCharacterImage(player2ImageView, player2Index);
     }
 
     public Scene createCharacterSelectScene() {
         SoundManager.playBGM("select.mp3");
 
-
         BorderPane root = new BorderPane();
-        root.setPadding(new Insets(20));
-        root.getStyleClass().add("root-background"); // *** เพิ่มพื้นหลังสีเทา ***
+        root.getStyleClass().add("root-background");
 
-        // 1. Title
-        Label titleLabel = new Label("เลือกตัวละคร");
-        titleLabel.setFont(Font.font("Arial", FontWeight.BOLD, 48)); // ใหญ่และหนาขึ้น
-        titleLabel.setStyle("-fx-text-fill: #333333;");
-        BorderPane.setAlignment(titleLabel, Pos.CENTER);
-        root.setTop(titleLabel);
+        // โหลดรูปภาพเริ่มต้น
+        updateCharacterImage(player1ImageView, player1Index);
+        updateCharacterImage(player2ImageView, player2Index);
 
-        // 2. Player Selection HBox
-        VBox player1VBox = createCharacterSelectionPanel(true);
-        VBox player2VBox = createCharacterSelectionPanel(false);
+        // กล่องเลือกตัวละคร
+        VBox p1Box = createPlayerSelectionBox("Player 1", player1ImageView, true);
+        VBox p2Box = createPlayerSelectionBox("Player 2", player2ImageView, false);
 
-        HBox selectionHBox = new HBox(80, player1VBox, player2VBox); // เพิ่มระยะห่าง
-        selectionHBox.setAlignment(Pos.CENTER);
-        root.setCenter(selectionHBox);
+        HBox centerBox = new HBox(50, p1Box, p2Box);
+        centerBox.setAlignment(Pos.CENTER);
+        root.setCenter(centerBox);
 
-        // 3. ปุ่มควบคุมด้านล่าง (เริ่มเกม & กลับ)
-        Button startGameButton = new Button("เริ่มเกม");
-        startGameButton.getStyleClass().add("menu-button"); // ใช้ Style ปุ่มเมนู
-        startGameButton.setPrefWidth(250);
+        // Header ด้านบน
+        Label headerLabel = new Label("CHOOSE YOUR CHARACTER");
+        headerLabel.setFont(Font.font("Arial", FontWeight.BOLD, 40));
+        headerLabel.setStyle("-fx-text-fill: white; -fx-effect: dropshadow(one-pass-box, black, 3, 0, 0, 2);");
 
-        Button backButton = new Button("กลับหน้าเมนู");
-        backButton.getStyleClass().add("exit-button");
-        backButton.setPrefWidth(200);
+        VBox topBox = new VBox(headerLabel);
+        topBox.setAlignment(Pos.CENTER);
+        topBox.setPadding(new Insets(40, 0, 0, 0));
+        root.setTop(topBox);
 
-        HBox bottomControl = new HBox(50, backButton, startGameButton);
-        bottomControl.setAlignment(Pos.CENTER);
-        BorderPane.setMargin(bottomControl, new Insets(40, 0, 20, 0));
-        root.setBottom(bottomControl);
+        // --- ส่วนปุ่มควบคุมด้านล่าง (แก้ไขใหม่) ---
 
-        // Event Handling สำหรับปุ่มเริ่มเกม
-        startGameButton.setOnAction(e -> {
-            // 1. ดึง List ผู้เล่นจาก GameController (สมมติว่า GameController ได้สร้าง Players ไว้แล้ว)
-            List<Player> selectedPlayers = gameController.getPlayers();
+        // 1. ปุ่ม Start Game
+        Button startButton = new Button("START GAME");
+        startButton.getStyleClass().add("menu-button");
+        startButton.setPrefWidth(200);
+        startButton.setOnAction(e -> {
+            List<Integer> selectedIndices = new ArrayList<>();
+            selectedIndices.add(player1Index);
+            selectedIndices.add(player2Index);
 
-            // 2. สร้าง List ของ Index ตัวละครที่ถูกเลือก
-            List<Integer> selectedCharIndices = new ArrayList<>();
-            selectedCharIndices.add(player1Index);
-            selectedCharIndices.add(player2Index);
+            List<Player> players = gameController.getPlayers();
 
-            // 3. สร้างหน้าจอเกมใหม่
-            GameBoardScreen gameScreen = new GameBoardScreen(
+            GameBoardScreen gameBoard = new GameBoardScreen(
                     primaryStage,
                     gameController,
-                    selectedPlayers,
-                    selectedCharIndices
+                    players,
+                    selectedIndices
             );
 
-            primaryStage.setScene(gameScreen.createGameScene());
-            primaryStage.setTitle("เกมเศรษฐี - กำลังเล่น");
+            primaryStage.setScene(gameBoard.createGameScene());
         });
 
-        // Event Handling สำหรับปุ่มกลับหน้าเมนู
+        // 2. ปุ่ม Back to Menu (เพิ่มใหม่)
+        Button backButton = new Button("BACK TO MENU");
+        backButton.getStyleClass().add("menu-button");
+        backButton.setPrefWidth(200);
+        // ปรับสีปุ่ม Back ให้เป็นสีเทาๆ เพื่อให้ Start Game เด่นกว่า
+        backButton.setStyle("-fx-background-color: #7f8c8d; -fx-text-fill: white;");
+
         backButton.setOnAction(e -> {
-            primaryStage.setScene(new GameMenu(primaryStage).createMenuScene());
-            primaryStage.setTitle("เกมเศรษฐี");
+            // กลับไปหน้าเมนู
+            GameMenu gameMenu = new GameMenu(primaryStage);
+            primaryStage.setScene(gameMenu.createMenuScene());
         });
 
-        Scene selectScene = new Scene(root, Main.WIDTH, Main.HEIGHT);
-        // ต้องเรียกใช้ Style Sheet
-        selectScene.getStylesheets().add(getClass().getResource("/style.css").toExternalForm());
+        // 3. จัดวางลง VBox
+        VBox bottomBox = new VBox(20, startButton, backButton); // เพิ่มระยะห่างระหว่างปุ่มเป็น 20
+        bottomBox.setAlignment(Pos.CENTER);
 
-        return selectScene;
+        // เพิ่ม Padding ด้านบน (ตัวเลขแรก) เป็น 60 เพื่อดันให้ห่างจากรูปตัวละคร
+        bottomBox.setPadding(new Insets(60, 0, 40, 0));
+
+        root.setBottom(bottomBox);
+
+        Scene scene = new Scene(root, 1000, 800);
+        try {
+            scene.getStylesheets().add(getClass().getResource("/style.css").toExternalForm());
+        } catch (Exception e) {
+            System.err.println("Warning: style.css not found!");
+        }
+
+        return scene;
     }
 
-    private VBox createCharacterSelectionPanel(boolean isPlayer1) {
-        // Label แสดงชื่อผู้เล่น
-        Label playerLabel = new Label(isPlayer1 ? "ผู้เล่น 1" : "ผู้เล่น 2");
-        playerLabel.setFont(Font.font("Arial", FontWeight.BOLD, 30));
-        // ใช้สีแยกผู้เล่น
-        String playerColor = isPlayer1 ? "#2E8B57" : "#FF6347";
-        playerLabel.setStyle("-fx-text-fill: " + playerColor + ";");
+    private VBox createPlayerSelectionBox(String titleText, ImageView imageView, boolean isPlayer1) {
+        Label title = new Label(titleText);
+        title.setFont(Font.font("Arial", FontWeight.BOLD, 24));
+        title.setStyle("-fx-text-fill: white; -fx-effect: dropshadow(one-pass-box, black, 2, 0, 1, 1);");
 
-        // ImageView (อ้างอิงจากตัวแปรสมาชิก)
-        ImageView imageView = isPlayer1 ? player1ImageView : player2ImageView;
+        imageView.setFitWidth(150);
+        imageView.setFitHeight(150);
+        imageView.setPreserveRatio(true);
+        imageView.setEffect(new DropShadow(10, Color.BLACK));
 
-        // ปุ่มควบคุม (HBox)
-        Button prevButton = new Button("◄");
-        Button nextButton = new Button("►");
-
-        // *** Style สำหรับปุ่มควบคุม (วงกลม) ***
-        String controlButtonStyle = "-fx-min-width: 50px; -fx-min-height: 50px; -fx-max-width: 50px; -fx-max-height: 50px; " +
-                "-fx-background-radius: 25; -fx-font-size: 20px; -fx-font-weight: bold; " +
-                "-fx-background-color: #555555; -fx-text-fill: white; -fx-cursor: hand;";
-        prevButton.setStyle(controlButtonStyle);
-        nextButton.setStyle(controlButtonStyle);
-
-        // เพิ่ม hover effect เล็กน้อย (optional)
-        prevButton.setOnMouseEntered(e -> prevButton.setStyle(controlButtonStyle + "-fx-background-color: #777777;"));
-        prevButton.setOnMouseExited(e -> prevButton.setStyle(controlButtonStyle));
-        nextButton.setOnMouseEntered(e -> nextButton.setStyle(controlButtonStyle + "-fx-background-color: #777777;"));
-        nextButton.setOnMouseExited(e -> nextButton.setStyle(controlButtonStyle));
-
+        Button prevButton = new Button("<");
+        prevButton.setStyle("-fx-font-size: 20px; -fx-min-width: 50px; -fx-background-radius: 100; -fx-cursor: hand;");
         prevButton.setOnAction(e -> changeCharacter(isPlayer1, -1));
+
+        Button nextButton = new Button(">");
+        nextButton.setStyle("-fx-font-size: 20px; -fx-min-width: 50px; -fx-background-radius: 100; -fx-cursor: hand;");
         nextButton.setOnAction(e -> changeCharacter(isPlayer1, 1));
 
-        HBox controlBox = new HBox(30, prevButton, nextButton);
-        controlBox.setAlignment(Pos.CENTER);
+        HBox selectorBox = new HBox(20, prevButton, imageView, nextButton);
+        selectorBox.setAlignment(Pos.CENTER);
 
-        // VBox รวมทั้งหมด (Panel)
-        VBox panel = new VBox(30, playerLabel, imageView, controlBox); // เพิ่มระยะห่าง
-        panel.setAlignment(Pos.CENTER);
-        panel.setPadding(new Insets(30));
-        panel.getStyleClass().add("character-box"); // *** ใช้ Style Box ***
+        VBox container = new VBox(15, title, selectorBox);
+        container.setAlignment(Pos.CENTER);
+        container.setPadding(new Insets(20));
 
-        // เพิ่มเส้นขอบตามสีผู้เล่น
-        panel.setStyle("-fx-border-color: " + playerColor + "; -fx-border-width: 4; -fx-border-radius: 15; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 10, 0.0, 0, 0);");
+        String borderColor = isPlayer1 ? "#2ecc71" : "#e74c3c";
+        container.setStyle(
+                "-fx-background-color: rgba(0,0,0,0.3);" +
+                        "-fx-background-radius: 20;" +
+                        "-fx-border-color: " + borderColor + ";" +
+                        "-fx-border-width: 3;" +
+                        "-fx-border-radius: 20;"
+        );
 
-        return panel;
+        return container;
     }
 
-    /**
-     * เมธอดสำหรับเปลี่ยน Index และอัปเดตภาพ
-     */
     private void changeCharacter(boolean isPlayer1, int direction) {
         int currentIndex = isPlayer1 ? player1Index : player2Index;
-
         int newIndex = (currentIndex + direction) % MAX_CHARACTERS;
-
         if (newIndex < 0) {
             newIndex = MAX_CHARACTERS - 1;
         }
@@ -190,18 +179,12 @@ public class CharacterSelectScreen {
         }
     }
 
-    /**
-     * เมธอดสำหรับโหลดและตั้งค่า Image ให้กับ ImageView
-     */
     private void updateCharacterImage(ImageView imageView, int index) {
         try {
             String fileName = CHARACTER_FILES[index];
-            String fullPath = RESOURCE_PATH + fileName;
-
-            Image image = new Image(getClass().getResourceAsStream(fullPath));
-            imageView.setImage(image);
+            imageView.setImage(new Image(getClass().getResourceAsStream(RESOURCE_PATH + fileName)));
         } catch (Exception e) {
-            System.err.println("!!! ERROR: ไม่พบไฟล์ภาพตัวละคร: " + CHARACTER_FILES[index] + " - ใช้ภาพสำรองแทน");
+            System.err.println("Error loading character image: " + CHARACTER_FILES[index]);
         }
     }
 }

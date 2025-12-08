@@ -2,6 +2,10 @@ package game;
 
 import model.*;
 import model.cards.*;
+import model.squares.AirplaneSquare;
+import model.squares.CardSquare;
+import model.squares.Property;
+import model.squares.Square;
 
 import java.util.ArrayList;
 import java.util.List;

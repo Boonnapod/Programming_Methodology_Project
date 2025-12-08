@@ -22,6 +22,7 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
 import javafx.util.Duration;
+import model.squares.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -541,6 +542,10 @@ public class GameBoardScreen {
     }
 
     private void showGameOverScreen(Player winner) {
+        // *** เพิ่มบรรทัดนี้: เล่นเพลงชัยชนะ ***
+        // (เพลงเก่าจะหยุดเองตาม Logic ใน SoundManager ที่เราเขียนไว้)
+        SoundManager.playBGM("win.mp3");
+
         VBox layout = new VBox(20);
         layout.setAlignment(Pos.CENTER);
         layout.setStyle("-fx-background-color: #2c3e50; -fx-padding: 40;");
@@ -575,6 +580,10 @@ public class GameBoardScreen {
         exitBtn.setStyle("-fx-font-size: 18px; -fx-background-color: #c0392b; -fx-text-fill: white; -fx-cursor: hand;");
 
         playAgainBtn.setOnAction(e -> {
+            // *** เพิ่ม: เมื่อกดเล่นใหม่ ให้กลับไปเล่นเพลงหน้าเลือกตัวละคร (หรือหน้าเมนู) ***
+            // ถ้าไม่ใส่ เพลง win.mp3 อาจจะเล่นค้างไปเรื่อยๆ
+            // SoundManager.stopBGM(); // หรือปล่อยให้หน้าถัดไปจัดการ
+
             GameController newGame = new GameController();
             CharacterSelectScreen selectScreen = new CharacterSelectScreen(primaryStage, newGame);
             primaryStage.setScene(selectScreen.createCharacterSelectScene());

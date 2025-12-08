@@ -1,4 +1,6 @@
-package model;
+package model.squares;
+
+import model.Player;
 
 public abstract class Square {
     private final String name;
