@@ -142,6 +142,27 @@ public class GameBoardScreen {
         updateTurnDisplay(rollButton);
 
         Scene gameScene = new Scene(root, WIDTH, HEIGHT);
+
+        // --- FIX: เพิ่ม Key Event Handler สำหรับการทดสอบ (Cheat Mode) ---
+        // ทำให้สามารถกดคีย์บอร์ด 1-6 เพื่อบังคับผลลัพธ์ลูกเต๋าได้
+        gameScene.setOnKeyPressed(event -> {
+            // ตรวจสอบว่าเป็นปุ่มตัวเลข 1 ถึง 6 หรือไม่
+            if (event.getCode().isDigitKey()) {
+                try {
+                    // event.getCode().getChar() จะคืนค่า String ของตัวเลขที่กด
+                    int steps = Integer.parseInt(event.getCode().getChar());
+                    if (steps >= 1 && steps <= 6) {
+                        // เรียกใช้ฟังก์ชันเดินทดสอบ (ซึ่งจะตั้งค่า forcedResult ใน Dice)
+                        handleTestMove(steps);
+                        event.consume(); // หยุดการส่งต่อ Event
+                    }
+                } catch (NumberFormatException e) {
+                    // ignore
+                }
+            }
+        });
+        // ------------------------------------------------------------------
+
         try {
             gameScene.getStylesheets().add(getClass().getResource("/style.css").toExternalForm());
         } catch (NullPointerException e) {
@@ -745,26 +766,41 @@ public class GameBoardScreen {
         return null;
     }
 
-    // ค้นหา method นี้ในไฟล์เดิม แล้วแทนที่ด้วยโค้ดชุดนี้
-    private VBox createSquareBox(Square square) {
-        // 1. สร้าง Label ชื่อช่องเหมือนเดิม
+
+    // ใน GameBoardScreen.java
+// ...
+
+    private VBox createSquareBox(Square square, int index) { // <--- **FIXED: รับ int index เข้ามา**
+
+        // --- NEW: 1. Label แสดงหมายเลขช่อง (Index Label) ---
+        Label indexLabel = new Label("#" + index);
+        indexLabel.setFont(Font.font("Arial", FontWeight.BOLD, 10));
+        indexLabel.setTextFill(Color.web("#333333"));
+        // ----------------------------------------------------
+
+        // 2. สร้าง Label ชื่อช่องเหมือนเดิม
         Label title = new Label(square.getName());
-        title.setFont(Font.font("Arial", FontWeight.BOLD, 12)); // ปรับ Font ให้หนาขึ้นเล็กน้อยเพื่อความชัด
+        title.setFont(Font.font("Arial", FontWeight.BOLD, 12));
         title.setWrapText(true);
         title.setAlignment(Pos.CENTER);
 
-        // 2. *** เรียกใช้เมธอดสร้างไอคอนที่เราเพิ่งเขียน ***
+        // 3. เรียกใช้เมธอดสร้างไอคอน
         ImageView iconView = createSquareIcon(square);
 
-        // 3. สร้าง VBox เพื่อรวมภาพและข้อความ
-        VBox box;
+        // 4. สร้าง VBox เพื่อรวมภาพและข้อความ
+        VBox box = new VBox(2);
+
+        // **FIX: เพิ่ม indexLabel เป็น Children ตัวแรกเสมอ**
+        box.getChildren().add(indexLabel);
+
         if (iconView != null) {
-            // ถ้ามีรูป ให้ใส่รูปก่อน แล้วตามด้วยชื่อ (VBox เรียงแนวตั้ง)
-            box = new VBox(2, iconView, title);
-        } else {
-            // ถ้าไม่มีรูป (เช่นช่องที่ดินทั่วไป) ใส่แค่ชื่อ
-            box = new VBox(5, title);
+            // ถ้ามีรูป ให้ใส่รูปตามหลัง index
+            box.getChildren().add(iconView);
         }
+
+        // ใส่ชื่อช่องเป็น Children ตัวสุดท้ายเสมอ
+        box.getChildren().add(title);
+        // --------------------------------------------------------------
 
         box.setAlignment(Pos.CENTER);
         box.setPrefSize(100, 100);
@@ -840,9 +876,10 @@ public class GameBoardScreen {
     }
 
     private void updateSquareBox(Square square) {
-        // 1. คำนวณหาตำแหน่งใน Grid (ใช้ Helper Method ที่คุณมี)
+        // 1. คำนวณหาตำแหน่งใน Grid
         int row = getRowForPosition(square.getPosition());
         int col = getColForPosition(square.getPosition());
+        int index = square.getPosition(); // Index คือตำแหน่งของช่อง
 
         // 2. ดึง StackPane ออกมาจาก Grid
         StackPane cell = getCellFromGrid(row, col);
@@ -850,33 +887,32 @@ public class GameBoardScreen {
         if (cell != null && !cell.getChildren().isEmpty() && cell.getChildren().get(0) instanceof VBox) {
             VBox squareBox = (VBox) cell.getChildren().get(0);
 
-            // -----------------------------------------------------------
-            // ส่วนที่ต้องเพิ่ม: อัปเดตเนื้อหาข้างใน (รูปภาพ + ชื่อ)
-            // -----------------------------------------------------------
-
-            // 3. ล้างเนื้อหาเก่าออกให้หมด (ทั้งรูปเก่าและชื่อเก่า)
+            // 3. ล้างเนื้อหาเก่าออกให้หมด
             squareBox.getChildren().clear();
 
-            // 4. สร้างไอคอนใหม่ (เรียก createSquareIcon ที่เราทำไว้)
-            // ระบบจะเช็คเองว่าเป็น Property? มีเจ้าของไหม? เป็น Landmark ไหม?
+            // --- NEW: 4. Recreate Index Label ---
+            Label indexLabel = new Label("#" + index);
+            indexLabel.setFont(Font.font("Arial", FontWeight.BOLD, 10));
+            indexLabel.setTextFill(Color.web("#333333"));
+            squareBox.getChildren().add(indexLabel);
+            // -----------------------------------
+
+            // 5. สร้างไอคอนใหม่
             ImageView iconView = createSquareIcon(square);
 
-            // 5. สร้าง Label ชื่อช่องใหม่
+            // 6. สร้าง Label ชื่อช่องใหม่
             Label title = new Label(square.getName());
             title.setFont(Font.font("Arial", FontWeight.BOLD, 12));
             title.setWrapText(true);
             title.setAlignment(Pos.CENTER);
 
-            // 6. ใส่กลับเข้าไปใน VBox
+            // 7. ใส่กลับเข้าไปใน VBox
             if (iconView != null) {
-                squareBox.getChildren().addAll(iconView, title);
-            } else {
-                squareBox.getChildren().add(title);
+                squareBox.getChildren().add(iconView);
             }
+            squareBox.getChildren().add(title);
 
-            // -----------------------------------------------------------
-
-            // 7. อัปเดตสีและขอบ (โค้ดเดิมของคุณ)
+            // 8. อัปเดตสีและขอบ
             updateSquareBoxStyle(squareBox, square);
         }
     }
@@ -894,7 +930,8 @@ public class GameBoardScreen {
 
                 if (squareIndex != -1 && squareIndex < board.getBoardSize()) {
                     Square square = board.getSquare(squareIndex);
-                    VBox squareBox = createSquareBox(square);
+                    // *** FIX: ส่ง squareIndex เข้าไปเป็นพารามิเตอร์ตัวที่สอง ***
+                    VBox squareBox = createSquareBox(square, squareIndex);
                     cell.getChildren().add(squareBox);
                     cell.setAlignment(Pos.CENTER);
                     cell.setId("square-cell-" + squareIndex);
@@ -1146,5 +1183,27 @@ public class GameBoardScreen {
         } catch (Exception e) {
             return 0; // กรณี error ให้ถือว่าเป็น 0
         }
+    }
+    private void handleTestMove(int steps) {
+        Button rollButton = (Button) primaryStage.getScene().lookup("#roll-button");
+        if (rollButton == null || rollButton.isDisable()) {
+            System.out.println("TEST MOVE: Cannot initiate test move while another action is in progress.");
+            return;
+        }
+
+        Player activePlayer = gameController.getCurrentPlayer();
+
+        // **FIX:** 1. บังคับผลลัพธ์ของ Dice ใน GameController
+        // (สมมติว่า gameController มีเมธอด getDice() ที่เข้าถึง Dice object ได้)
+        gameController.getDice().setForcedResult(steps);
+
+        // 2. ปิดปุ่ม Roll เพื่อป้องกันการกดซ้อนระหว่าง Animation
+        rollButton.setDisable(true);
+
+        // 3. เรียกใช้ขั้นตอนการทอยปกติ (executeRollAndMove)
+        // ซึ่งเมธอดนี้จะเรียก Dice.roll() และได้ผลลัพธ์ตามที่บังคับไว้
+        executeRollAndMove(activePlayer, rollButton);
+
+        System.out.println("TEST MOVE: " + activePlayer.getName() + " forces roll to " + steps + " steps (Key: " + steps + ")");
     }
 }
