@@ -1,7 +1,6 @@
 package model.squares;
 
 import model.Player;
-import model.Rentable;
 
 public class Property extends Square implements Rentable {
     private final int price;

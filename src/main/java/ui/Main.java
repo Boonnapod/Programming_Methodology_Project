@@ -13,7 +13,7 @@ public class Main extends Application {
     public void start(Stage primaryStage) {
         GameMenu menu = new GameMenu(primaryStage);
 
-        primaryStage.setTitle("เกมเศรษฐี - เมนูหลัก");
+        primaryStage.setTitle("เกมยาจก");
         primaryStage.setScene(menu.createMenuScene());
         primaryStage.show();
     }

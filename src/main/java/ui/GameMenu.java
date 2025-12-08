@@ -66,7 +66,7 @@ public class GameMenu {
             );
 
             primaryStage.setScene(selectScreen.createCharacterSelectScene());
-            primaryStage.setTitle("เกมเศรษฐี - เลือกตัวละคร");
+            primaryStage.setTitle("เกมยาจก");
         });
 
         exitButton.setOnAction(e -> {
