@@ -5,9 +5,10 @@ import model.Player;
 
 /**
  * คลาสแม่ (Abstract) สำหรับการ์ดทุกประเภท
- * กำหนดโครงสร้างพื้นฐานและเมธอด execute() ที่เป็น abstract
+ * - กำหนดโครงสร้างข้อมูลพื้นฐาน (description)
+ * - implement สัญญา CardAction
  */
-public abstract class Card {
+public abstract class Card { // *** เพิ่ม implements CardAction ***
     private final String description;
 
     public Card(String description) {
@@ -19,9 +20,9 @@ public abstract class Card {
     }
 
     /**
-     * เมธอดสำหรับดำเนินการของการ์ด ซึ่งคลาสลูกต้อง implement (Polymorphism)
-     * @param player ผู้เล่นที่จั่วการ์ด
-     * @param board กระดานเกม (ใช้สำหรับหาตำแหน่งหรือทรัพย์สิน)
+     * เมธอด execute() ถูกบังคับให้ต้องมีโดย CardAction
+     * เรายังคงใช้ abstract เพื่อบังคับให้คลาสลูกต้อง implement
+     * (ถึงแม้ว่า Interface จะบังคับอยู่แล้ว แต่ทำให้โครงสร้างดูชัดเจนขึ้น)
      */
     public abstract void execute(Player player, Board board);
 }

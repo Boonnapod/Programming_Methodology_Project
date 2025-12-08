@@ -44,6 +44,7 @@ public class CharacterSelectScreen {
     }
 
     public Scene createCharacterSelectScene() {
+        // เริ่มเล่น BGM
         SoundManager.playBGM("select.mp3");
 
         BorderPane root = new BorderPane();
@@ -84,6 +85,10 @@ public class CharacterSelectScreen {
 
             List<Player> players = gameController.getPlayers();
 
+            // *** 🎯 เพิ่มโค้ดส่วนนี้เพื่อหยุดเพลงของ Select Screen ก่อนเปลี่ยนหน้าจอ 🎯 ***
+            // เมธอด SoundManager.stopBGM() ต้องมีอยู่ในคลาส SoundManager ของคุณ
+            SoundManager.stopBGM();
+
             GameBoardScreen gameBoard = new GameBoardScreen(
                     primaryStage,
                     gameController,
@@ -102,6 +107,9 @@ public class CharacterSelectScreen {
         backButton.setStyle("-fx-background-color: #7f8c8d; -fx-text-fill: white;");
 
         backButton.setOnAction(e -> {
+            // หยุดเพลงก่อนกลับไปหน้าเมนูด้วย
+            SoundManager.stopBGM();
+
             // กลับไปหน้าเมนู
             GameMenu gameMenu = new GameMenu(primaryStage);
             primaryStage.setScene(gameMenu.createMenuScene());

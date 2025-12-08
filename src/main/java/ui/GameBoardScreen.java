@@ -1,6 +1,8 @@
 package ui;
 
-import javafx.scene.media.AudioClip; // *** เพิ่มตัวนี้ ***
+import javafx.scene.media.AudioClip;
+import javafx.scene.media.Media; // Import ใหม่
+import javafx.scene.media.MediaPlayer; // Import ใหม่
 import java.net.URL;
 import game.GameController;
 import model.*;
@@ -39,6 +41,9 @@ public class GameBoardScreen {
     private Label player1MoneyLabel;
     private Label player2MoneyLabel;
     private Label playerTurnLabel;
+
+    // FIX 1: ประกาศตัวแปร winSound เพื่อเก็บ AudioClip และควบคุมการหยุด
+    private AudioClip winSound;
 
     private final List<ImageView> playerTokens;
     private final GridPane boardGrid;
@@ -541,10 +546,32 @@ public class GameBoardScreen {
         }
     }
 
-    private void showGameOverScreen(Player winner) {
-        // *** เพิ่มบรรทัดนี้: เล่นเพลงชัยชนะ ***
-        // (เพลงเก่าจะหยุดเองตาม Logic ใน SoundManager ที่เราเขียนไว้)
-        SoundManager.playBGM("win.mp3");
+    // FIX 2: ปรับเมธอด showGameOverScreen ให้เป็นไปตามกฎ "เกมยาจก" และจัดการเสียง
+    private void showGameOverScreen(Player bankruptPlayer) {
+        // *** 1. หยุด BGM ของ Board (สมมติว่า SoundManager มี stopBGM) ***
+        SoundManager.stopBGM();
+
+        // *** 2. เล่นเพลง Win และเก็บ reference เพื่อให้หยุดได้ ***
+        try {
+            URL url = getClass().getResource("/soundfx/win.mp3");
+            if (url != null) {
+                if (winSound != null) winSound.stop(); // หยุดเสียงเก่า เผื่อเรียกซ้ำ
+                winSound = new AudioClip(url.toExternalForm());
+                winSound.setVolume(0.5);
+                winSound.play();
+            }
+        } catch (Exception e) { System.err.println("Win sound error: " + e.getMessage()); }
+
+        // --- กำหนด Winner/Loser ตามกฎ "เกมยาจก" ---
+        Player winner = bankruptPlayer; // ผู้เล่นที่เงินหมดก่อน คือ ผู้ชนะ
+        Player loser = players.stream()
+                .filter(p -> p != winner)
+                .findFirst()
+                .orElse(null);
+
+        if (loser == null) {
+            loser = winner;
+        }
 
         VBox layout = new VBox(20);
         layout.setAlignment(Pos.CENTER);
@@ -558,7 +585,8 @@ public class GameBoardScreen {
         winnerLabel.setFont(Font.font("Arial", FontWeight.BOLD, 36));
         winnerLabel.setTextFill(Color.WHITE);
 
-        Label subLabel = new Label("ฉันไม่เหลืออะไรแล้วชีวิตนี้ ลาก่อน...");
+        // ข้อความสำหรับกฎยาจก
+        Label subLabel = new Label("ไม่เหลืออะไรแล้วชึวิต ลาก่อน...");
         subLabel.setFont(Font.font("Arial", 18));
         subLabel.setTextFill(Color.LIGHTGRAY);
 
@@ -580,12 +608,18 @@ public class GameBoardScreen {
         exitBtn.setStyle("-fx-font-size: 18px; -fx-background-color: #c0392b; -fx-text-fill: white; -fx-cursor: hand;");
 
         playAgainBtn.setOnAction(e -> {
-            // *** เพิ่ม: เมื่อกดเล่นใหม่ ให้กลับไปเล่นเพลงหน้าเลือกตัวละคร (หรือหน้าเมนู) ***
-            // ถ้าไม่ใส่ เพลง win.mp3 อาจจะเล่นค้างไปเรื่อยๆ
-            // SoundManager.stopBGM(); // หรือปล่อยให้หน้าถัดไปจัดการ
+            // *** FIX 3: หยุดเพลง win.mp3 ทันทีเมื่อกด Play Again และกลับไปหน้าเลือกตัวละคร ***
+            if (winSound != null) {
+                winSound.stop();
+            }
 
+            // 1. สร้าง GameController ใหม่ (เพื่อรีเซ็ตสถานะเกมทั้งหมด)
             GameController newGame = new GameController();
+
+            // 2. สร้าง CharacterSelectScreen ใหม่
             CharacterSelectScreen selectScreen = new CharacterSelectScreen(primaryStage, newGame);
+
+            // 3. เปลี่ยน Scene (CharacterSelectScreen ควรจะเปิดเพลง select.mp3 เอง)
             primaryStage.setScene(selectScreen.createCharacterSelectScene());
         });
 
@@ -999,14 +1033,14 @@ public class GameBoardScreen {
     private void playDiceSound() {
         try {
             // โหลดไฟล์เสียงจาก path /Sound/dice.mp3
-            URL soundResource = getClass().getResource("/Soundfx/dice.mp3");
+            URL soundResource = getClass().getResource("/soundfx/dice.mp3");
 
             if (soundResource != null) {
                 AudioClip sound = new AudioClip(soundResource.toExternalForm());
                 sound.setVolume(1.0); // ปรับความดัง 0.0 - 1.0
                 sound.play();
             } else {
-                System.err.println("!!! Error: ไม่พบไฟล์เสียง dice.mp3 ใน /Sound/");
+                System.err.println("!!! Error: ไม่พบไฟล์เสียง dice.mp3 ใน /soundfx/");
             }
         } catch (Exception e) {
             System.err.println("Error playing sound: " + e.getMessage());
@@ -1078,7 +1112,6 @@ public class GameBoardScreen {
         try {
             String text = label.getText();
             if (text == null || text.isEmpty()) return 0;
-
             // ลบทุกตัวอักษรที่ไม่ใช่ตัวเลขและเครื่องหมายลบออก
             String numberOnly = text.replaceAll("[^0-9-]", "");
             return Integer.parseInt(numberOnly);

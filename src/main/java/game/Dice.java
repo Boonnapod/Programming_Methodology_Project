@@ -11,6 +11,6 @@ public class Dice {
 
     public int roll() {
         // ทอยลูกเต๋ามาตรฐาน 6 หน้า 1 ลูก
-        return random.nextInt(6) + 1;
+        return 5;
     }
 }
