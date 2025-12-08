@@ -1,7 +1,6 @@
 package ui;
 
 import game.GameController;
-import model.Board;
 import model.Player;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -53,6 +52,9 @@ public class CharacterSelectScreen {
     }
 
     public Scene createCharacterSelectScene() {
+        SoundManager.playBGM("select.mp3");
+
+
         BorderPane root = new BorderPane();
         root.setPadding(new Insets(20));
         root.getStyleClass().add("root-background"); // *** เพิ่มพื้นหลังสีเทา ***

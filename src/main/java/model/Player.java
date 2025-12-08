@@ -11,7 +11,7 @@ public class Player {
     private int jailTurns = 0;
 
     private static final int SMALL_BOARD_SIZE = 20;
-    private static final int INITIAL_MONEY_DEFAULT = 500;
+    private static final int INITIAL_MONEY_DEFAULT = 2000;
 
     public Player(String name) {
         this.name = name;

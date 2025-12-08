@@ -1,6 +1,6 @@
 package game;
 
-import model.Card;
+import model.cards.Card;
 import model.Player;
 import model.cards.*;
 

@@ -2,7 +2,6 @@ package ui;
 
 import javafx.application.Application;
 import javafx.stage.Stage;
-import ui.GameMenu;
 
 public class Main extends Application {
 

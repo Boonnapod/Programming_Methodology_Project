@@ -25,6 +25,8 @@ public class GameMenu {
 
     public Scene createMenuScene() {
         // 1. โหลดภาพปกเกม
+        SoundManager.playBGM("main.mp3");
+
         ImageView coverImageView = null;
         try {
             Image coverImage = new Image(getClass().getResourceAsStream(COVER_IMAGE_PATH));

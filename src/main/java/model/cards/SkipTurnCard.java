@@ -1,7 +1,6 @@
 package model.cards;
 
 import model.Board;
-import model.Card;
 import model.Player;
 
 public class SkipTurnCard extends Card {

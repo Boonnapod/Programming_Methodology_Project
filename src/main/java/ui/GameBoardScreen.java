@@ -1,8 +1,10 @@
 package ui;
 
+import javafx.scene.media.AudioClip; // *** เพิ่มตัวนี้ ***
+import java.net.URL;
 import game.GameController;
 import model.*;
-import model.Card;
+import model.cards.Card;
 import javafx.animation.KeyFrame;
 import javafx.animation.PauseTransition;
 import javafx.animation.Timeline;
@@ -46,6 +48,7 @@ public class GameBoardScreen {
     };
     private static final String RESOURCE_PATH = "/Character/";
     private static final int MOVEMENT_DELAY_MS = 300;
+    private static final String ICON_PATH = "/Image/";
 
     // Screen Size
     private static final int WIDTH = 1000;
@@ -86,6 +89,8 @@ public class GameBoardScreen {
     }
 
     public Scene createGameScene() {
+        SoundManager.playBGM("board.mp3");
+
         BorderPane root = new BorderPane();
         root.getStyleClass().add("game-background");
 
@@ -98,6 +103,7 @@ public class GameBoardScreen {
         rollButton.setOnAction(e -> {
             rollButton.setDisable(true);
             startTurnAndAnimate(rollButton);
+            playDiceSound();
         });
 
         // Player Turn Label
@@ -159,6 +165,7 @@ public class GameBoardScreen {
 
         // 3. ทอยเต๋า (มีอนิเมชัน)
         executeRollAndMove(activePlayer, rollButton);
+
     }
 
     private void handleJailTurn(Player player, Button rollButton) {
@@ -208,26 +215,26 @@ public class GameBoardScreen {
      * ทอยลูกเต๋าพร้อม Effect ตัวเลขวิ่ง
      */
     private void executeRollAndMove(Player activePlayer, Button rollButton) {
-        Timeline diceAnimation = new Timeline();
-        diceAnimation.setCycleCount(15); // เปลี่ยนเลข 15 ครั้ง
+        // 1. *** ใส่เสียงลูกเต๋าตรงนี้ (เริ่มทอย) ***
+        playDiceSound();
 
-        // เปลี่ยนเลขหลอกๆ ทุก 50ms
+        Timeline diceAnimation = new Timeline();
+        diceAnimation.setCycleCount(15);
+
         diceAnimation.getKeyFrames().add(new KeyFrame(Duration.millis(50), e -> {
             int randomFace = (int)(Math.random() * 6) + 1;
             rollButton.setText(String.valueOf(randomFace));
         }));
 
         diceAnimation.setOnFinished(e -> {
-            // 1. รับค่าจริง
             int actualSteps = gameController.getDice().roll();
             System.out.println(activePlayer.getName() + " rolled a " + actualSteps);
 
-            // 2. แสดงค่าจริง
             rollButton.setText(String.valueOf(actualSteps));
 
-            // 3. หน่วงเวลา 0.5 วิ ก่อนเริ่มเดิน
             PauseTransition pause = new PauseTransition(Duration.seconds(0.5));
             pause.setOnFinished(event -> {
+                // ส่งต่อไปยัง Animation การเดิน
                 animateMovement(activePlayer, actualSteps, rollButton);
             });
             pause.play();
@@ -279,6 +286,18 @@ public class GameBoardScreen {
         timeline.setOnFinished(event -> {
             Platform.runLater(() -> {
                 handleLandedSquareInteraction(player, rollButton);
+                Square currentSquare = board.getSquare(player.getPosition());
+
+                // ---------------------------------------------------------
+                // 3. *** เรียกเสียงตกช่องตรงนี้ (สำคัญ!) ***
+                playSquareSound(currentSquare);
+                // ---------------------------------------------------------
+
+                // 4. เรียก Logic เมื่อตกช่อง (เช่น จ่ายเงิน/ติดคุก)
+                // gameController.handleLandOnSquare(currentSquare, player);
+
+                // 5. เปิดปุ่มให้กดต่อได้ (ถ้าจบเทิร์นแล้ว)
+                rollButton.setDisable(false);
             });
         });
 
@@ -655,16 +674,34 @@ public class GameBoardScreen {
         return null;
     }
 
+    // ค้นหา method นี้ในไฟล์เดิม แล้วแทนที่ด้วยโค้ดชุดนี้
     private VBox createSquareBox(Square square) {
+        // 1. สร้าง Label ชื่อช่องเหมือนเดิม
         Label title = new Label(square.getName());
-        title.setFont(Font.font("Arial", 10));
+        title.setFont(Font.font("Arial", FontWeight.BOLD, 12)); // ปรับ Font ให้หนาขึ้นเล็กน้อยเพื่อความชัด
+        title.setWrapText(true);
+        title.setAlignment(Pos.CENTER);
 
-        VBox box = new VBox(5, title);
+        // 2. *** เรียกใช้เมธอดสร้างไอคอนที่เราเพิ่งเขียน ***
+        ImageView iconView = createSquareIcon(square);
+
+        // 3. สร้าง VBox เพื่อรวมภาพและข้อความ
+        VBox box;
+        if (iconView != null) {
+            // ถ้ามีรูป ให้ใส่รูปก่อน แล้วตามด้วยชื่อ (VBox เรียงแนวตั้ง)
+            box = new VBox(2, iconView, title);
+        } else {
+            // ถ้าไม่มีรูป (เช่นช่องที่ดินทั่วไป) ใส่แค่ชื่อ
+            box = new VBox(5, title);
+        }
+
         box.setAlignment(Pos.CENTER);
         box.setPrefSize(100, 100);
 
+        // เรียกใช้ Style สีพื้นหลังเดิมของคุณ
         updateSquareBoxStyle(box, square);
 
+        // ตั้งค่า Border พื้นฐาน
         box.setBorder(new Border(new BorderStroke(
                 Color.BLACK,
                 BorderStrokeStyle.SOLID,
@@ -732,12 +769,43 @@ public class GameBoardScreen {
     }
 
     private void updateSquareBox(Square square) {
+        // 1. คำนวณหาตำแหน่งใน Grid (ใช้ Helper Method ที่คุณมี)
         int row = getRowForPosition(square.getPosition());
         int col = getColForPosition(square.getPosition());
+
+        // 2. ดึง StackPane ออกมาจาก Grid
         StackPane cell = getCellFromGrid(row, col);
 
-        if (cell != null && cell.getChildren().get(0) instanceof VBox) {
+        if (cell != null && !cell.getChildren().isEmpty() && cell.getChildren().get(0) instanceof VBox) {
             VBox squareBox = (VBox) cell.getChildren().get(0);
+
+            // -----------------------------------------------------------
+            // ส่วนที่ต้องเพิ่ม: อัปเดตเนื้อหาข้างใน (รูปภาพ + ชื่อ)
+            // -----------------------------------------------------------
+
+            // 3. ล้างเนื้อหาเก่าออกให้หมด (ทั้งรูปเก่าและชื่อเก่า)
+            squareBox.getChildren().clear();
+
+            // 4. สร้างไอคอนใหม่ (เรียก createSquareIcon ที่เราทำไว้)
+            // ระบบจะเช็คเองว่าเป็น Property? มีเจ้าของไหม? เป็น Landmark ไหม?
+            ImageView iconView = createSquareIcon(square);
+
+            // 5. สร้าง Label ชื่อช่องใหม่
+            Label title = new Label(square.getName());
+            title.setFont(Font.font("Arial", FontWeight.BOLD, 12));
+            title.setWrapText(true);
+            title.setAlignment(Pos.CENTER);
+
+            // 6. ใส่กลับเข้าไปใน VBox
+            if (iconView != null) {
+                squareBox.getChildren().addAll(iconView, title);
+            } else {
+                squareBox.getChildren().add(title);
+            }
+
+            // -----------------------------------------------------------
+
+            // 7. อัปเดตสีและขอบ (โค้ดเดิมของคุณ)
             updateSquareBoxStyle(squareBox, square);
         }
     }
@@ -846,10 +914,167 @@ public class GameBoardScreen {
     }
 
     public void updatePlayerMoney(Player player) {
+        // 1. หาว่าต้องอัปเดต Label ของใคร
+        Label targetLabel = null;
         if (player == players.get(0)) {
-            player1MoneyLabel.setText("Money: $" + player.getMoney());
+            targetLabel = player1MoneyLabel;
         } else if (players.size() > 1 && player == players.get(1)) {
-            player2MoneyLabel.setText("Money: $" + player.getMoney());
+            targetLabel = player2MoneyLabel;
+        }
+
+        // 2. ถ้าเจอ Label ที่ต้องอัปเดต
+        if (targetLabel != null) {
+            int oldMoney = getMoneyFromLabel(targetLabel); // เงินที่โชว์อยู่ (ค่าเก่า)
+            int newMoney = player.getMoney();              // เงินจริงตอนนี้ (ค่าใหม่)
+
+            // 3. เปรียบเทียบ: ถ้าเงินไม่เท่าเดิม ค่อยเล่นเสียงและเปลี่ยนข้อความ
+            if (oldMoney != newMoney) {
+                // เล่นเสียงเฉพาะตอนเงินเปลี่ยน
+                playSound("lottery.mp3");
+
+                // อัปเดตข้อความ
+                targetLabel.setText("Money: $" + newMoney);
+
+                // (Optional) ปรินท์เช็คใน Console
+                // System.out.println("Money changed: " + oldMoney + " -> " + newMoney);
+            }
+        }
+    }
+
+    private ImageView createSquareIcon(Square square) {
+        String fileName = null;
+
+        // --- ส่วนตรวจสอบ Property (บ้าน/แลนด์มาร์ค) ---
+        if (square instanceof Property) {
+            Property prop = (Property) square;
+
+            // เช็ค Landmark ก่อน (สำคัญมาก!)
+            if (prop.isLandmark()) {
+                fileName = "landmark.png"; // ใช้รูปแลนด์มาร์ค
+            }
+            // ถ้าไม่ใช่ Landmark แต่มีเจ้าของแล้ว
+            else if (prop.getOwner() != null) {
+                fileName = "house.png";    // ใช้รูปบ้าน
+            }
+        }
+
+        // --- ส่วนตรวจสอบช่องพิเศษอื่นๆ (เหมือนเดิม) ---
+        else if (square instanceof LotterySquare) {
+            fileName = "ingots.png";
+        } else if (square instanceof TaxSquare) {
+            fileName = "bag.png";
+        } else if (square instanceof JailSquare) {
+            fileName = "jail.png";
+        } else if (square instanceof AirplaneSquare) {
+            fileName = "plane.png";
+        } else if (square instanceof CardSquare) {
+            fileName = "q.png";
+        }
+
+        // --- โหลดรูปภาพ ---
+        if (fileName != null) {
+            try {
+                // เช็คว่าไฟล์อยู่ใน /Image/ จริงๆ
+                Image img = new Image(getClass().getResourceAsStream("/Image/" + fileName));
+                ImageView view = new ImageView(img);
+                view.setFitWidth(45);
+                view.setFitHeight(45);
+                view.setPreserveRatio(true);
+                return view;
+            } catch (Exception e) {
+                System.err.println("!!! Error loading icon: " + fileName);
+            }
+        }
+        return null;
+    }
+    private void playDiceSound() {
+        try {
+            // โหลดไฟล์เสียงจาก path /Sound/dice.mp3
+            URL soundResource = getClass().getResource("/Soundfx/dice.mp3");
+
+            if (soundResource != null) {
+                AudioClip sound = new AudioClip(soundResource.toExternalForm());
+                sound.setVolume(1.0); // ปรับความดัง 0.0 - 1.0
+                sound.play();
+            } else {
+                System.err.println("!!! Error: ไม่พบไฟล์เสียง dice.mp3 ใน /Sound/");
+            }
+        } catch (Exception e) {
+            System.err.println("Error playing sound: " + e.getMessage());
+        }
+
+    }
+    private void playSound(String fileName) {
+        try {
+            // *** แก้ไข: เปลี่ยนจาก /Sound/ เป็น /soundfx/ ***
+            URL soundResource = getClass().getResource("/soundfx/" + fileName);
+
+            if (soundResource != null) {
+                AudioClip sound = new AudioClip(soundResource.toExternalForm());
+                sound.setVolume(1.0);
+                sound.play();
+            } else {
+                System.err.println("!!! ไม่พบไฟล์เสียง: /soundfx/" + fileName);
+            }
+        } catch (Exception e) {
+            System.err.println("Error playing sound [" + fileName + "]: " + e.getMessage());
+        }
+    }
+
+    /**
+     * เช็คประเภทช่องและเล่นเสียงตามที่กำหนด
+     */
+    private void playSquareSound(Square square) {
+        String soundFile = null;
+
+        // 1. เช็คว่าตกช่องแบบไหน
+        if (square instanceof CardSquare) {
+            soundFile = "card.mp3";
+        } else if (square instanceof JailSquare) {
+            soundFile = "jail.mp3";
+        } else if (square instanceof LotterySquare || square instanceof TaxSquare) {
+            soundFile = "lottery.mp3";
+        } else if (square instanceof AirplaneSquare) {
+            soundFile = "plane.mp3";
+        }
+
+        // 2. ถ้ามีชื่อไฟล์ ให้พยายามเล่น
+        if (soundFile != null) {
+            System.out.println(">> กำลังพยายามเล่นเสียง: " + soundFile); // DEBUG LINE
+            try {
+                // ต้องใส่ /Sound/ นำหน้าเสมอ
+                URL soundResource = getClass().getResource("/soundfx/" + soundFile);
+
+                if (soundResource != null) {
+                    AudioClip sound = new AudioClip(soundResource.toExternalForm());
+                    sound.setVolume(1.0);
+                    sound.play();
+                    System.out.println(">> เล่นเสียงสำเร็จ!"); // DEBUG LINE
+                } else {
+                    System.err.println("!!! หาไฟล์ไม่เจอ: /soundfx/" + soundFile);
+                    System.err.println("!!! เช็คว่าไฟล์อยู่ใน src/main/resources/soundfx/ หรือไม่");
+                }
+            } catch (Exception e) {
+                System.err.println("!!! Error ขณะเล่นเสียง: " + e.getMessage());
+                e.printStackTrace();
+            }
+        } else {
+            System.out.println(">> ช่องนี้ไม่มีเสียง (Type: " + square.getClass().getSimpleName() + ")");
+        }
+    }
+    /**
+     * ดึงค่าเงินที่เป็นตัวเลขออกมาจาก Label (เช่น "Money: $2000" -> 2000)
+     */
+    private int getMoneyFromLabel(Label label) {
+        try {
+            String text = label.getText();
+            if (text == null || text.isEmpty()) return 0;
+
+            // ลบทุกตัวอักษรที่ไม่ใช่ตัวเลขและเครื่องหมายลบออก
+            String numberOnly = text.replaceAll("[^0-9-]", "");
+            return Integer.parseInt(numberOnly);
+        } catch (Exception e) {
+            return 0; // กรณี error ให้ถือว่าเป็น 0
         }
     }
 }
