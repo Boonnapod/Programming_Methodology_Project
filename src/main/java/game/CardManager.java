@@ -20,12 +20,12 @@ public class CardManager {
 
     private void initializeDeck(List<Player> players) {
         // 3.1 การ์ดเคลื่อนที่ไปยังเมืองที่แพงที่สุดของฝั่งตรงข้าม
-        deck.add(new MoveToAirPlane("Move to AirPlane", players));
+        deck.add(new MoveToAirPlane("Move to AirPlane"));
 
         // 3.2 การ์ดหยุดเดิน 1 ตา
         deck.add(new SkipTurnCard("You've missed your train. Skip your next turn.", 1));
 
-        // 3.3 การ์ดได้รับเงินแบบสุ่ม 10% - 20% ของเงินตอนเริ่มเกม (\1500)
+        // 3.3 การ์ดได้รับเงินแบบสุ่ม 10% - 20% ของเงินตอนเริ่มเกม (1500)
         Random random = new Random();
         int amount = Player.getInitialMoney() * (random.nextInt(11) + 10) / 100; // 10% - 20%
         deck.add(new ReceiveMoneyCard("You won the lottery! Collect $" + amount, amount));
@@ -33,7 +33,7 @@ public class CardManager {
         // เพิ่มการ์ดซ้ำเพื่อให้มีจำนวนพอสมควร
         deck.add(new SkipTurnCard("The taxman caught you. Skip next turn.", 1));
         deck.add(new ReceiveMoneyCard("OraOraHaHa! Collect $150.", 150));
-        deck.add(new MoveToAirPlane("Teleportation gone wrong! Jump to foe's best property.", players));
+        deck.add(new MoveToAirPlane("You can fly."));
     }
 
     public Card drawCard() {

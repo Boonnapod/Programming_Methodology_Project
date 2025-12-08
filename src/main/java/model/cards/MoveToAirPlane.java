@@ -3,37 +3,44 @@ package model.cards;
 import model.Board;
 import model.Card;
 import model.Player;
-import model.AirplaneSquare; // เพิ่ม import สำหรับ AirplaneSquare ถ้ามีคลาสนี้
-
-import java.util.List;
+import model.Square;
 
 public class MoveToAirPlane extends Card {
 
-    // ไม่จำเป็นต้องใช้ List<Player> แล้ว เพราะไม่ได้คำนวณคู่แข่ง
-    // แต่คงไว้ตามโครงสร้างเดิมถ้า CardManager ยังส่งมา
-    public MoveToAirPlane(String description, List<Player> players) {
+    // ตำแหน่ง Airport จาก Board.java คือ index 15
+    private static final int AIRPLANE_POSITION = 15;
+
+    // ใช้ constructor ที่รับแค่ description ตาม GameController.zip/CardManager.java
+    public MoveToAirPlane(String description) {
         super(description);
     }
 
     @Override
     public void execute(Player currentPlayer, Board board) {
-        final int AIRPLANE_POSITION = 15; // ตำแหน่งของ Airport (ตาม Board.java)
 
         System.out.println(">> Card Action: " + getDescription());
-        System.out.println(">> Warping " + currentPlayer.getName() + " directly to the Airport!");
+        System.out.println(">> " + currentPlayer.getName() + " is teleported to the Airport (Position " + AIRPLANE_POSITION + ")!");
 
-        // 1. ใช้ warp() เพื่อกระโดดไปที่ตำแหน่ง Airport (ไม่ผ่าน Go)
-        currentPlayer.warp(AIRPLANE_POSITION);
+        int currentPos = currentPlayer.getPosition();
+        // Board Size คือ 20 (ใช้ค่าคงที่จาก Player หรือกำหนดตรงนี้ถ้าไม่มี getter ใน Board)
+        int boardSize = 20;
 
-        // 2. กระตุ้น Logic เมื่อลงบนช่อง Airport
-        // Note: Logic การเลือกปลายทางจะถูกจัดการใน handleLandedSquareAction ของ GameController
-        // โดยการเรียก landOn() จะเป็นการเริ่มต้น Logic ของช่อง Airport
-        board.getSquare(currentPlayer.getPosition()).landOn(currentPlayer);
+        // คำนวณจำนวนก้าวที่ต้องเดิน (เพื่อให้ผ่าน Go ได้หากจำเป็น)
+        int steps;
+        if (currentPos <= AIRPLANE_POSITION) {
+            steps = AIRPLANE_POSITION - currentPos;
+        } else {
+            // เดินวนกระดาน
+            steps = boardSize - currentPos + AIRPLANE_POSITION;
+        }
 
-        // เนื่องจาก AirplaneSquare.landOn() ทำแค่แสดงข้อความ "Choose your destination!"
-        // GameController.handleLandedSquareAction จะเห็นว่าลง AirplaneSquare
-        // และเรียก handleAirplaneSquare(currentPlayer) ต่อไป
+        // 1. เคลื่อนที่ผู้เล่นโดยใช้ move(steps) เพื่อจัดการเรื่องผ่าน Go
+        // **FIX 1: ใช้ move(steps) ครั้งเดียวแทนการวนลูป**
+        currentPlayer.move(steps);
 
-        System.out.println(">> " + currentPlayer.getName() + " is now at position " + AIRPLANE_POSITION + " (Airport).");
+        System.out.println(">> " + currentPlayer.getName() + " is now at position " + currentPlayer.getPosition() + " (" + board.getSquare(currentPlayer.getPosition()).getName() + ").");
+
+        // *** FIX 2: ลบบรรทัดที่เรียก square.landOn(currentPlayer) ออก ***
+        // ปล่อยให้ GameController จัดการ Logic การทำงานของช่องใหม่ต่อ
     }
 }

@@ -2,8 +2,6 @@ package model;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
-// import com.monopoly.game.CardManager; // ถูกนำออกเนื่องจากไม่ได้ใช้ใน Board.java แต่ถูกคงไว้ถ้าคุณต้องการ
 
 public class Board {
     private final List<Square> squares;
@@ -20,42 +18,39 @@ public class Board {
             squares.add(null);
         }
 
-        // 2. กำหนดช่องสำคัญโดยใช้ set(index, element)
+        // 2. กำหนดช่องสำคัญ (Special Squares)
         squares.set(0, new GoSquare(0)); // 0: Go
-        squares.set(5, new JailSquare("Jail", 5)); // 5: Jail (มุม)
 
-        // **********************************************
-        // ******* LOGIC แก้ไขสำหรับตำแหน่ง 10 (Lottery) *******
-        squares.set(10, new Square("Lottery", 10) {
+        // ****************************************************************
+        // 3. แก้ไขตำแหน่ง 5 (Jail): ให้เป็นกับดัก! เดินตกปุ๊บ ติดคุกทันที
+        // (ใช้ Anonymous Class override landOn เพื่อสั่ง goToJail)
+        // ****************************************************************
+        squares.set(5, new JailSquare("Jail", 5) {
             @Override
             public void landOn(Player player) {
-                // Logic: สุ่มตัวเลข 1-5 แล้วคูณด้วย 100 (ได้ 100, 200, 300, 400, หรือ 500)
-                Random random = new Random();
-                int amount = (random.nextInt(5) + 1) * 100;
+                System.out.println(player.getName() + " landed on Jail.");
+                System.out.println(">> YOU ARE ARRESTED!");
 
-                System.out.println(player.getName() + " landed on Lottery! You win $" + amount + "!");
-                player.addMoney(amount);
+                // สั่งให้ผู้เล่นติดคุกทันที (Set jailTurns = 2)
+                player.goToJail();
             }
         });
-        // **********************************************
 
-        // 3. เพิ่มช่องการ์ด (CardSquare) และช่องเครื่องบิน (AirplaneSquare)
-        squares.set(3, new CardSquare("Mystery Card", 3)); // ช่องการ์ด 1
-        squares.set(8, new CardSquare("Mystery Card", 8)); // ช่องการ์ด 2
-        squares.set(13, new CardSquare("Mystery Card", 13)); // ช่องการ์ด 3
+        // ช่อง Lottery (ตำแหน่ง 10)
+        squares.set(10, new LotterySquare("Lottery", 10));
 
-        // Note: index 15 ควรเป็น GoToJail ตามโค้ดเดิม แต่ใช้ Airport ตามที่คุณให้มา
+        // ช่องการ์ด (CardSquare)
+        squares.set(3, new CardSquare("Mystery Card", 3));
+        squares.set(8, new CardSquare("Mystery Card", 8));
+        squares.set(13, new CardSquare("Mystery Card", 13));
+
+        // ช่องเครื่องบิน (AirplaneSquare)
         squares.set(15, new AirplaneSquare("Airport", 15));
 
-        // 4. ตัวอย่าง Property และ Tax
+        // ช่อง Tax (จ่ายภาษี)
+        squares.set(4, new TaxSquare("Income Tax", 4));
 
-        squares.set(4, new Square("Income Tax", 4) { // ตำแหน่ง 4
-            @Override
-            public void landOn(Player player) {
-                System.out.println("Income Tax: Player pays $300.");
-                player.deductMoney(300);
-            }
-        });
+        // 4. กำหนด Property (จังหวัดต่างๆ)
         squares.set(1, new Property("UDONTHANI", 1, 200, 100));
         squares.set(2, new Property("CHAIYAPHUM", 2, 220, 110));
         squares.set(6, new Property("BURIRAM", 6, 180, 90));
@@ -69,8 +64,18 @@ public class Board {
         squares.set(16, new Property("AYUTTHAYA", 16, 250, 125));
         squares.set(17, new Property("SARABURI", 17, 270, 135));
         squares.set(18, new Property("YALA", 18, 280, 140));
+
+        // ****************************************************************
+        // 5. แก้ไขตำแหน่ง 19 กลับเป็น BANGKOK ตามที่ต้องการ
+        // ****************************************************************
         squares.set(19, new Property("BANGKOK", 19, 300, 150));
 
+        // 6. เติมช่องที่เหลือกัน Null Pointer Exception
+        for (int i = 0; i < BOARD_SIZE; i++) {
+            if (squares.get(i) == null) {
+                squares.set(i, new Property("Square " + i, i, 80, 10));
+            }
+        }
     }
 
     public Square getSquare(int index) {
@@ -80,7 +85,8 @@ public class Board {
     public List<Square> getSquares() {
         return squares;
     }
-    public int getBoardSize(){
+
+    public int getBoardSize() {
         return BOARD_SIZE;
     }
 }

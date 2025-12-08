@@ -91,3 +91,76 @@
     -fx-border-color: #4CAF50;
     -fx-effect: dropshadow(gaussian, #4CAF50, 10, 0.0, 0, 0);
 }
+/* =================================================================================
+   GAME DIALOG / ALERT STYLES
+   ================================================================================= */
+
+/* ตัวกล่อง Dialog หลัก */
+.dialog-pane {
+    -fx-background-color: #fdfaf6; /* สีพื้นหลังขาวครีม */
+    -fx-border-color: #2c3e50;     /* ขอบสีเข้ม */
+    -fx-border-width: 3px;
+    -fx-border-radius: 15px;       /* มุมโค้งของเส้นขอบ */
+    -fx-background-radius: 15px;   /* มุมโค้งของพื้นหลัง */
+    -fx-padding: 10px;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.5), 20, 0, 0, 10); /* เงาหลังกล่อง */
+}
+
+/* ส่วนหัวข้อ (Header) ที่มีไอคอนและข้อความหลัก */
+.dialog-pane .header-panel {
+    -fx-background-color: #34495e; /* สีพื้นหลังส่วนหัว (น้ำเงินเข้มอมเทา) */
+    -fx-background-radius: 10px 10px 0 0; /* โค้งเฉพาะด้านบน */
+    -fx-padding: 15px;
+}
+
+.dialog-pane .header-panel .label {
+    -fx-text-fill: white;          /* สีตัวหนังสือหัวข้อ */
+    -fx-font-family: "Arial";
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-effect: dropshadow(one-pass-box, black, 2, 0, 1, 1);
+}
+
+/* ส่วนเนื้อหาข้อความ (Content) */
+.dialog-pane .content {
+    -fx-padding: 20px;
+    -fx-background-color: transparent;
+}
+
+.dialog-pane .content .label {
+    -fx-text-fill: #2c3e50;        /* สีตัวหนังสือเนื้อหา */
+    -fx-font-family: "Arial";
+    -fx-font-size: 16px;
+    -fx-wrap-text: true;
+}
+
+/* =================================================================================
+   BUTTON STYLES IN DIALOG
+   ================================================================================= */
+
+/* ปุ่มทั้งหมดใน Dialog */
+.dialog-pane .button {
+    -fx-background-color: #e67e22; /* สีส้ม */
+    -fx-text-fill: white;
+    -fx-font-family: "Arial";
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+    -fx-background-radius: 20px;
+    -fx-padding: 8px 20px;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.3), 5, 0, 0, 3);
+}
+
+.dialog-pane .button:hover {
+    -fx-background-color: #d35400; /* สีส้มเข้มเมื่อเอาเมาส์ชี้ */
+    -fx-scale-x: 1.05;
+    -fx-scale-y: 1.05;
+}
+
+.dialog-pane .button:pressed {
+    -fx-background-color: #a04000;
+    -fx-effect: none;
+    -fx-translate-y: 2;
+}
+
+/* ปุ่ม Cancel หรือ Wait (ถ้าต้องการแยกสี ต้องกำหนด StyleClass เพิ่มใน Java แต่ Default ส้มก็สวยแล้ว) */

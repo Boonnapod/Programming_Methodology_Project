@@ -4,8 +4,9 @@ import game.GameController;
 import model.*;
 import model.Card;
 import javafx.animation.KeyFrame;
+import javafx.animation.PauseTransition;
 import javafx.animation.Timeline;
-import javafx.application.Platform; // *** สำคัญ: สำหรับ Platform.runLater() ***
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -39,14 +40,14 @@ public class GameBoardScreen {
     private final List<ImageView> playerTokens;
     private final GridPane boardGrid;
 
-    // ... (Constants)
+    // Constants
     private static final String[] CHARACTER_FILES = {
             "character_01.png", "character_02.png", "character_03.png"
     };
     private static final String RESOURCE_PATH = "/Character/";
     private static final int MOVEMENT_DELAY_MS = 300;
 
-    // สมมติขนาดหน้าจอ
+    // Screen Size
     private static final int WIDTH = 1000;
     private static final int HEIGHT = 800;
 
@@ -126,7 +127,7 @@ public class GameBoardScreen {
         }
 
         updatePlayerTokens();
-        updateTurnDisplay(rollButton); // Initial update for color
+        updateTurnDisplay(rollButton);
 
         Scene gameScene = new Scene(root, WIDTH, HEIGHT);
         try {
@@ -137,22 +138,17 @@ public class GameBoardScreen {
         return gameScene;
     }
 
-    /**
-     * เริ่มเทิร์น ทอยลูกเต๋า และจัดการแอนิเมชัน
-     */
+    // =========================================================================
+    // *** Turn Management Logic ***
+    // =========================================================================
+
     private void startTurnAndAnimate(Button rollButton) {
         Player activePlayer = gameController.getCurrentPlayer();
 
-        // 1. ตรวจสอบ Jail (NEW LOGIC)
+        // 1. ตรวจสอบสถานะติดคุกก่อน
         if (activePlayer.isInJail()) {
-            boolean shouldPlayTurn = showJailDialog(activePlayer, rollButton);
-            if (!shouldPlayTurn) {
-                // ไม่ได้ออกจากคุก -> ข้ามเทิร์น
-                gameController.moveToNextPlayer();
-                updateTurnDisplay(rollButton);
-                return;
-            }
-            // หาก shouldPlayTurn เป็น true แสดงว่าผู้เล่นจ่ายเงินออกแล้ว ให้ดำเนินการต่อ
+            handleJailTurn(activePlayer, rollButton);
+            return;
         }
 
         // 2. ตรวจสอบ Skip Turn
@@ -161,46 +157,83 @@ public class GameBoardScreen {
             return;
         }
 
-        // 3. ทอยลูกเต๋า
-        int steps = gameController.getDice().roll();
-        System.out.println(activePlayer.getName() + " rolled a " + steps);
-
-        // 4. เริ่มแอนิเมชันการเดิน
-        animateMovement(activePlayer, steps, rollButton);
+        // 3. ทอยเต๋า (มีอนิเมชัน)
+        executeRollAndMove(activePlayer, rollButton);
     }
 
-    // *** NEW: Dialog สำหรับ Jail ***
-    private boolean showJailDialog(Player player, Button rollButton) {
+    private void handleJailTurn(Player player, Button rollButton) {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("You are in Jail!");
-        alert.setHeaderText(player.getName() + " is in Jail.");
-        alert.setContentText("Do you want to pay $50 to get out and roll the dice?");
+        alert.setTitle("In Jail");
+        alert.setHeaderText("You are in Jail!");
+        alert.setContentText("Turns left: " + player.getJailTurns() + "\nChoose an action:");
 
-        ButtonType payButton = new ButtonType("Pay $50 and Roll");
-        ButtonType stayButton = new ButtonType("Stay in Jail", ButtonBar.ButtonData.CANCEL_CLOSE);
+        ButtonType payButton = new ButtonType("Pay $200");
+        ButtonType waitButton = new ButtonType("Wait");
+        alert.getButtonTypes().setAll(payButton, waitButton);
 
-        alert.getButtonTypes().setAll(payButton, stayButton);
+        styleDialog(alert);
 
         Optional<ButtonType> result = alert.showAndWait();
 
         if (result.isPresent() && result.get() == payButton) {
-            // ผู้เล่นเลือกจ่ายเงิน
-            if (player.getMoney() >= 50 && player.deductMoney(50)) {
+            if (player.deductMoney(200)) {
                 player.releaseFromJail();
-                updatePlayerMoney(player);
-                showSimpleAlert("Jail Release", player.getName() + " paid $50 and is now released!");
-                return true; // ออกจากคุกสำเร็จ -> เล่นต่อได้
+                refreshAllPlayersMoney();
+                showSimpleAlert("Released!", "You paid $200 bail. You can move now!");
 
+                // จ่ายแล้วเดินต่อเลย
+                executeRollAndMove(player, rollButton);
             } else {
-                // เงินไม่พอ
-                showSimpleAlert("Transaction Failed", player.getName() + " cannot afford to pay $50 and stays in Jail.");
-                return false; // ไม่ได้ออกจากคุก -> ต้องข้ามเทิร์น
+                showSimpleAlert("Error", "Not enough money to pay bail!");
+                processWaitInJail(player, rollButton);
             }
         } else {
-            // ผู้เล่นเลือกอยู่ต่อ
-            showSimpleAlert("Jail Stay", player.getName() + " chose to stay in Jail for this turn.");
-            return false; // อยู่ในคุก -> ต้องข้ามเทิร์น
+            processWaitInJail(player, rollButton);
         }
+    }
+
+    private void processWaitInJail(Player player, Button rollButton) {
+        player.decrementJailTurns();
+
+        if (player.getJailTurns() <= 0) {
+            player.releaseFromJail();
+            showSimpleAlert("Time served", "You served your time. Next turn you will be free.");
+        } else {
+            showSimpleAlert("Stay in Jail", "You are still in jail. Turns left: " + player.getJailTurns());
+        }
+        endTurn(player, rollButton);
+    }
+
+    /**
+     * ทอยลูกเต๋าพร้อม Effect ตัวเลขวิ่ง
+     */
+    private void executeRollAndMove(Player activePlayer, Button rollButton) {
+        Timeline diceAnimation = new Timeline();
+        diceAnimation.setCycleCount(15); // เปลี่ยนเลข 15 ครั้ง
+
+        // เปลี่ยนเลขหลอกๆ ทุก 50ms
+        diceAnimation.getKeyFrames().add(new KeyFrame(Duration.millis(50), e -> {
+            int randomFace = (int)(Math.random() * 6) + 1;
+            rollButton.setText(String.valueOf(randomFace));
+        }));
+
+        diceAnimation.setOnFinished(e -> {
+            // 1. รับค่าจริง
+            int actualSteps = gameController.getDice().roll();
+            System.out.println(activePlayer.getName() + " rolled a " + actualSteps);
+
+            // 2. แสดงค่าจริง
+            rollButton.setText(String.valueOf(actualSteps));
+
+            // 3. หน่วงเวลา 0.5 วิ ก่อนเริ่มเดิน
+            PauseTransition pause = new PauseTransition(Duration.seconds(0.5));
+            pause.setOnFinished(event -> {
+                animateMovement(activePlayer, actualSteps, rollButton);
+            });
+            pause.play();
+        });
+
+        diceAnimation.play();
     }
 
     private void showSkipTurnDialog(Player player, Button rollButton) {
@@ -209,25 +242,21 @@ public class GameBoardScreen {
         alert.setHeaderText(player.getName() + " must skip turn!");
         alert.setContentText("You have " + player.getSkipTurns() + " turn(s) left to skip.");
 
-        player.setSkipTurns(player.getSkipTurns() - 1);
+        styleDialog(alert);
 
+        player.setSkipTurns(player.getSkipTurns() - 1);
         alert.showAndWait();
 
-        // จบเทิร์นทันทีหลังจาก Skip
         gameController.moveToNextPlayer();
         updateTurnDisplay(rollButton);
     }
 
-    /**
-     * สร้าง Timeline สำหรับเดิน Token ทีละช่อง
-     */
     private void animateMovement(Player player, int steps, Button rollButton) {
         Timeline timeline = new Timeline();
         int boardSize = gameController.getBoard().getBoardSize();
 
         for (int i = 1; i <= steps; i++) {
             final int step = i;
-
             KeyFrame keyFrame = new KeyFrame(
                     Duration.millis(MOVEMENT_DELAY_MS * step),
                     event -> {
@@ -236,10 +265,9 @@ public class GameBoardScreen {
 
                         player.warp(newPosition);
 
-                        // ตรวจสอบการผ่าน Go (รับเงิน $200) ด้วยตัวเอง
                         if (newPosition == 0 && oldPosition != 0) {
-                            player.addMoney(100);
-                            updatePlayerMoney(player);
+                            player.addMoney(20);
+                            refreshAllPlayersMoney();
                             System.out.println(player.getName() + " passed Go! Collected $200.");
                         }
                         updatePlayerTokens();
@@ -248,9 +276,7 @@ public class GameBoardScreen {
             timeline.getKeyFrames().add(keyFrame);
         }
 
-        // KeyFrame สุดท้าย: เมื่อแอนิเมชั่นจบ
         timeline.setOnFinished(event -> {
-            // *** FIX: ใช้ Platform.runLater() เพื่อหลีกเลี่ยง IllegalStateException ***
             Platform.runLater(() -> {
                 handleLandedSquareInteraction(player, rollButton);
             });
@@ -260,16 +286,20 @@ public class GameBoardScreen {
     }
 
     // =========================================================================
-    // *** Interactive Logic Handling ***
+    // *** Central Interaction Hub ***
     // =========================================================================
 
     private void handleLandedSquareInteraction(Player player, Button rollButton) {
         Square landedSquare = board.getSquare(player.getPosition());
+        System.out.println(">>> Handling interaction at: " + landedSquare.getName() + " [" + player.getPosition() + "]");
 
-        // 1. เรียก landOn() เพื่อให้ Console Log ทำงาน และแสดงข้อความเบื้องต้น
+        // 1. Logic Model
         landedSquare.landOn(player);
 
-        // 2. จัดการ Logic ตามประเภทช่อง
+        // Update UI Money
+        refreshAllPlayersMoney();
+
+        // 2. Logic UI (Polymorphism)
         if (landedSquare instanceof Property) {
             handlePropertyAction(player, (Property) landedSquare, rollButton);
         } else if (landedSquare instanceof CardSquare) {
@@ -277,44 +307,41 @@ public class GameBoardScreen {
         } else if (landedSquare instanceof AirplaneSquare) {
             handleAirplaneAction(player, rollButton);
         } else {
-            // สำหรับ Go, Jail (Just Visiting), Lottery, Go to Jail (ซึ่ง goToJail ทำงานใน landOn แล้ว)
-            checkBankruptcy(player);
-            gameController.moveToNextPlayer();
-            updateTurnDisplay(rollButton);
+            handleGeneralSquareAction(player, landedSquare, rollButton);
         }
     }
 
     private void handlePropertyAction(Player player, Property property, Button rollButton) {
-        // ตรวจสอบ Rentable และการจ่ายค่าเช่า
         if (property.getOwner() != null && property.getOwner() != player) {
-
-            // 1. Logic การจ่ายค่าเช่า (รวมถึง Buyout)
+            // Pay Rent
             int rent = property.calculateRent(0);
-
             Alert rentAlert = new Alert(Alert.AlertType.CONFIRMATION);
             rentAlert.setTitle("Property Owned");
             rentAlert.setHeaderText("Pay Rent! $" + rent);
             rentAlert.setContentText(player.getName() + " landed on " + property.getOwner().getName() + "'s property (" + property.getName() + "). Pay rent now?");
+
+            styleDialog(rentAlert);
 
             Optional<ButtonType> rentResult = rentAlert.showAndWait();
             if (rentResult.isPresent() && rentResult.get() == ButtonType.OK) {
                 if (player.deductMoney(rent)) {
                     property.getOwner().addMoney(rent);
                 } else {
-                    // ล้มละลายหากเงินไม่พอจ่ายค่าเช่า
-                    player.addMoney(-player.getMoney());
+                    player.addMoney(-player.getMoney()); // Bankrupt logic start
                 }
-                updatePlayerMoney(player);
+                refreshAllPlayersMoney();
             }
 
-            // 2. Logic Buyout (ถ้าไม่ใช่ Landmark และผู้เล่นมีเงินพอ)
+            // Buyout Logic
             if (player.getMoney() > 0 && !property.isLandmark()) {
                 int buyoutPrice = (int)( property.getPrice() * 1.5);
                 if (player.getMoney() >= buyoutPrice) {
                     Alert buyoutAlert = new Alert(Alert.AlertType.CONFIRMATION);
                     buyoutAlert.setTitle("Buyout Opportunity");
                     buyoutAlert.setHeaderText("Buyout " + property.getName() + "?");
-                    buyoutAlert.setContentText("Price: $" + buyoutPrice + ". Do you want to buy it from " + property.getOwner().getName() + "?");
+                    buyoutAlert.setContentText("Price: $" + buyoutPrice + ". Do you want to buy it?");
+
+                    styleDialog(buyoutAlert);
 
                     Optional<ButtonType> buyoutResult = buyoutAlert.showAndWait();
                     if (buyoutResult.isPresent() && buyoutResult.get() == ButtonType.OK) {
@@ -323,29 +350,118 @@ public class GameBoardScreen {
                             property.setOwner(player);
                             property.setLandmark(false);
                             updateSquareBox(property);
-                            System.out.println("✅ " + player.getName() + " successfully bought out " + property.getName() + "!");
+                            refreshAllPlayersMoney();
+                            System.out.println("✅ " + player.getName() + " bought out " + property.getName());
                         }
                     }
                 }
             }
-
-            checkBankruptcy(player);
-            gameController.moveToNextPlayer();
-            updateTurnDisplay(rollButton);
+            endTurn(player, rollButton);
 
         } else if (property.getOwner() == player) {
-            // ช่องตัวเอง: เสนอให้อัพเกรดเป็น Landmark
+            // Upgrade
             if (!property.isLandmark()) {
                 showUpgradePropertyDialog(player, property, rollButton);
             } else {
-                gameController.moveToNextPlayer();
-                updateTurnDisplay(rollButton);
+                endTurn(player, rollButton);
             }
 
         } else {
-            // ช่องว่าง: เสนอให้ซื้อ
+            // Buy
             showBuyPropertyDialog(player, property, rollButton);
         }
+    }
+
+    private void handleCardAction(Player player, Button rollButton) {
+        int oldPosition = player.getPosition();
+
+        Card drawnCard = gameController.getCardManager().drawCard();
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Draw Card");
+        alert.setHeaderText("You drew a card!");
+        alert.setContentText("Effect: " + drawnCard.getDescription());
+
+        styleDialog(alert);
+        alert.showAndWait();
+
+        drawnCard.execute(player, board);
+
+        refreshAllPlayersMoney();
+        updatePlayerTokens();
+
+        // Recursion Check: ถ้าย้ายที่จากการ์ด ให้เรียก Hub ใหม่
+        int newPosition = player.getPosition();
+        if (newPosition != oldPosition) {
+            System.out.println(">> Player moved by card. Triggering new square interaction...");
+            handleLandedSquareInteraction(player, rollButton);
+        } else {
+            endTurn(player, rollButton);
+        }
+    }
+
+    private void handleAirplaneAction(Player player, Button rollButton) {
+        List<Square> allSquares = board.getSquares();
+        List<String> choices = allSquares.stream()
+                .map(s -> "[" + s.getPosition() + "] " + s.getName())
+                .collect(Collectors.toList());
+
+        ChoiceDialog<String> dialog = new ChoiceDialog<>(choices.get(0), choices);
+        dialog.setTitle("Airplane Flight");
+        dialog.setHeaderText("Welcome to the Airport!");
+        dialog.setContentText(player.getName() + ", choose your destination:");
+
+        styleDialog(dialog);
+
+        Optional<String> result = dialog.showAndWait();
+
+        if (result.isPresent()) {
+            int targetPosition = Integer.parseInt(result.get().split("]")[0].substring(1));
+            gameController.handleAirplaneAction(player, targetPosition);
+
+            updatePlayerTokens();
+            refreshAllPlayersMoney();
+
+            // Recursion: ลงจอดแล้วเรียก Hub ใหม่
+            handleLandedSquareInteraction(player, rollButton);
+
+        } else {
+            showSimpleAlert("Flight Cancelled", "You chose to stay at the airport.");
+            endTurn(player, rollButton);
+        }
+    }
+
+    private void handleGeneralSquareAction(Player player, Square landedSquare, Button rollButton) {
+        if (landedSquare instanceof TaxSquare) {
+            TaxSquare taxSq = (TaxSquare) landedSquare;
+            showSimpleAlert("Tax", "You paid tax! Amount: $" + taxSq.getLastTaxPaid());
+
+        } else if (landedSquare instanceof LotterySquare) {
+            LotterySquare lotterySq = (LotterySquare) landedSquare;
+            showSimpleAlert("Lottery", "You won the lottery! Prize: $" + lotterySq.getLastPrize());
+
+        } else if (landedSquare instanceof GoToJailSquare) {
+            showSimpleAlert("Arrested", "You are going to Jail!");
+            updatePlayerTokens();
+
+        } else if (landedSquare instanceof JailSquare) {
+            if (player.isInJail()) {
+                showSimpleAlert("Jail", "You are in Jail!");
+            } else {
+                showSimpleAlert("Jail", "Just Visiting.");
+            }
+        }
+
+        endTurn(player, rollButton);
+    }
+
+    // =========================================================================
+    // *** Helper Methods & UI Utilities ***
+    // =========================================================================
+
+    private void endTurn(Player player, Button rollButton) {
+        checkBankruptcy(player);
+        gameController.moveToNextPlayer();
+        updateTurnDisplay(rollButton);
     }
 
     private void showBuyPropertyDialog(Player player, Property property, Button rollButton) {
@@ -354,20 +470,19 @@ public class GameBoardScreen {
         alert.setHeaderText("Unowned Property: " + property.getName());
         alert.setContentText("Price: $" + property.getPrice() + ". Would you like to buy it?");
 
+        styleDialog(alert);
+
         Optional<ButtonType> result = alert.showAndWait();
         if (result.isPresent() && result.get() == ButtonType.OK) {
             if (player.deductMoney(property.getPrice())) {
                 property.setOwner(player);
                 updateSquareBox(property);
             } else {
-                showSimpleAlert("Transaction Failed", "You don't have enough money to buy " + property.getName() + "!");
+                showSimpleAlert("Transaction Failed", "You don't have enough money!");
             }
-            checkBankruptcy(player);
-            updatePlayerMoney(player);
+            refreshAllPlayersMoney();
         }
-
-        gameController.moveToNextPlayer();
-        updateTurnDisplay(rollButton);
+        endTurn(player, rollButton);
     }
 
     private void showUpgradePropertyDialog(Player player, Property property, Button rollButton) {
@@ -376,87 +491,87 @@ public class GameBoardScreen {
         alert.setHeaderText("Your Property: " + property.getName());
         alert.setContentText("Upgrade to Landmark? Cost: $" + property.getUpgradeCost() + ". (Rent x3)");
 
+        styleDialog(alert);
+
         Optional<ButtonType> result = alert.showAndWait();
         if (result.isPresent() && result.get() == ButtonType.OK) {
             if (player.deductMoney(property.getUpgradeCost())) {
                 property.setLandmark(true);
                 updateSquareBox(property);
             } else {
-                showSimpleAlert("Transaction Failed", "You don't have enough money to upgrade " + property.getName() + "!");
+                showSimpleAlert("Transaction Failed", "Not enough money to upgrade!");
             }
-            checkBankruptcy(player);
-            updatePlayerMoney(player);
+            refreshAllPlayersMoney();
         }
-
-        gameController.moveToNextPlayer();
-        updateTurnDisplay(rollButton);
+        endTurn(player, rollButton);
     }
 
-    private void handleCardAction(Player player, Button rollButton) {
-        Card drawnCard = gameController.getCardManager().drawCard();
-
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Draw Card");
-        alert.setHeaderText("You drew a card!");
-        alert.setContentText("Effect: " + drawnCard.getDescription());
-        alert.showAndWait();
-
-        drawnCard.execute(player, board);
-
-        updatePlayerMoney(player);
-        updatePlayerTokens(); // อัปเดตตำแหน่งหากมีการย้ายตัวละคร
-
-        // หลังจาก Execute Card ต้องมีการตรวจสอบและอัปเดต UI ที่เกี่ยวข้อง
-        checkBankruptcy(player);
-        gameController.moveToNextPlayer();
-        updateTurnDisplay(rollButton);
-    }
-
-    private void handleAirplaneAction(Player player, Button rollButton) {
-        // สร้างรายการช่องทั้งหมดให้เลือก
-        List<Square> allSquares = board.getSquares();
-        List<String> choices = allSquares.stream()
-                .map(s -> "[" + s.getPosition() + "] " + s.getName())
-                .collect(Collectors.toList());
-
-        ChoiceDialog<String> dialog = new ChoiceDialog<>(choices.get(0), choices);
-        dialog.setTitle("Airplane Flight");
-        dialog.setHeaderText("Select your destination to fly to:");
-        dialog.setContentText(player.getName() + ", choose a square:");
-
-        Optional<String> result = dialog.showAndWait();
-
-        if (result.isPresent()) {
-            int targetPosition = Integer.parseInt(result.get().split("]")[0].substring(1));
-
-            // เรียกใช้เมธอดใน GameController เพื่อคำนวณการเดินและเก็บเงินผ่าน Go
-            gameController.handleAirplaneAction(player, targetPosition);
-
-            updatePlayerMoney(player);
-            updatePlayerTokens();
-
-            // Logic ต่อไป: จัดการ action ที่ช่องปลายทาง
-            Square landedSquare = board.getSquare(player.getPosition());
-            landedSquare.landOn(player); // เรียก landOn เพื่อให้เกิด Console Log และเตรียมปฏิสัมพันธ์
-
-            if (landedSquare instanceof Property) {
-                // ถ้าลงช่อง Property ต้องไปเข้า Logic ซื้อ/เช่าอีกครั้ง
-                handlePropertyAction(player, (Property) landedSquare, rollButton);
-                return;
-            }
-        } else {
-            showSimpleAlert("Action Required", "You must select a destination to fly. Turn skipped.");
+    private void refreshAllPlayersMoney() {
+        for (Player p : players) {
+            updatePlayerMoney(p);
         }
-
-        checkBankruptcy(player);
-        gameController.moveToNextPlayer();
-        updateTurnDisplay(rollButton);
     }
 
+    // -------------------------------------------------------------------------
+    //  GAME OVER & BANKRUPTCY
+    // -------------------------------------------------------------------------
     private void checkBankruptcy(Player player) {
         if (player.getMoney() <= 0) {
-            showSimpleAlert("Game Over!", player.getName() + " has gone BANKRUPT! The other player WINS!");
+            showGameOverScreen(player);
         }
+    }
+
+    private void showGameOverScreen(Player winner) {
+        VBox layout = new VBox(20);
+        layout.setAlignment(Pos.CENTER);
+        layout.setStyle("-fx-background-color: #2c3e50; -fx-padding: 40;");
+
+        Label headerLabel = new Label("🏆 GAME OVER 🏆");
+        headerLabel.setFont(Font.font("Arial", FontWeight.BOLD, 48));
+        headerLabel.setTextFill(Color.GOLD);
+
+        Label winnerLabel = new Label(winner.getName() + " WINS!");
+        winnerLabel.setFont(Font.font("Arial", FontWeight.BOLD, 36));
+        winnerLabel.setTextFill(Color.WHITE);
+
+        Label subLabel = new Label("ฉันไม่เหลืออะไรแล้วชีวิตนี้ ลาก่อน...");
+        subLabel.setFont(Font.font("Arial", 18));
+        subLabel.setTextFill(Color.LIGHTGRAY);
+
+        // Winner Image
+        int playerIndex = players.indexOf(winner);
+        int charIndex = selectedCharIndices.get(playerIndex);
+        ImageView winnerImage = createCharacterImageView(charIndex);
+        winnerImage.setFitWidth(200);
+        winnerImage.setFitHeight(200);
+        winnerImage.setEffect(new DropShadow(20, Color.BLACK));
+
+        // Buttons
+        Button playAgainBtn = new Button("Play Again");
+        playAgainBtn.setPrefSize(150, 50);
+        playAgainBtn.setStyle("-fx-font-size: 18px; -fx-background-color: #27ae60; -fx-text-fill: white; -fx-cursor: hand;");
+
+        Button exitBtn = new Button("Exit Game");
+        exitBtn.setPrefSize(150, 50);
+        exitBtn.setStyle("-fx-font-size: 18px; -fx-background-color: #c0392b; -fx-text-fill: white; -fx-cursor: hand;");
+
+        playAgainBtn.setOnAction(e -> {
+            GameController newGame = new GameController();
+            CharacterSelectScreen selectScreen = new CharacterSelectScreen(primaryStage, newGame);
+            primaryStage.setScene(selectScreen.createCharacterSelectScene());
+        });
+
+        exitBtn.setOnAction(e -> {
+            Platform.exit();
+            System.exit(0);
+        });
+
+        HBox buttonsBox = new HBox(20, playAgainBtn, exitBtn);
+        buttonsBox.setAlignment(Pos.CENTER);
+
+        layout.getChildren().addAll(headerLabel, winnerImage, winnerLabel, subLabel, buttonsBox);
+        Scene gameOverScene = new Scene(layout, WIDTH, HEIGHT);
+        primaryStage.setScene(gameOverScene);
     }
 
     private void showSimpleAlert(String title, String content) {
@@ -464,12 +579,27 @@ public class GameBoardScreen {
         alert.setTitle(title);
         alert.setHeaderText(null);
         alert.setContentText(content);
+        styleDialog(alert);
         alert.showAndWait();
+    }
+
+    // *** STYLE HELPER ***
+    private void styleDialog(Dialog<?> dialog) {
+        DialogPane dialogPane = dialog.getDialogPane();
+        try {
+            dialogPane.getStylesheets().add(getClass().getResource("/style.css").toExternalForm());
+            dialogPane.getStyleClass().add("game-dialog");
+        } catch (Exception e) {
+            System.err.println("Warning: Could not load style.css for dialog.");
+        }
     }
 
     private void updateTurnDisplay(Button rollButton) {
         Player nextPlayer = gameController.getCurrentPlayer();
         playerTurnLabel.setText("Turn: " + nextPlayer.getName());
+
+        // Reset Button Text
+        rollButton.setText("Roll Dice!");
         rollButton.setDisable(false);
 
         Color playerColor = (nextPlayer == players.get(0)) ? Color.LIMEGREEN : Color.RED;
@@ -484,7 +614,7 @@ public class GameBoardScreen {
     }
 
     // =========================================================================
-    // *** Existing Methods (Board UI) ***
+    // *** Board Rendering Logic ***
     // =========================================================================
 
     public void updatePlayerTokens() {
@@ -545,25 +675,22 @@ public class GameBoardScreen {
         return box;
     }
 
-    /**
-     * Helper method to set style based on Square type and ownership
-     */
     private void updateSquareBoxStyle(VBox box, Square square) {
         String backgroundColor = "#FFFFFF";
         String borderColor = "#000000";
 
         if (square.getPosition() == 0) {
-            backgroundColor = "#AAFFAA"; // Go (เขียวอ่อน)
+            backgroundColor = "#AAFFAA"; // Go
         } else if (square instanceof JailSquare) {
-            backgroundColor = "#ADD8E6"; // Jail (น้ำเงินพาสเทล)
+            backgroundColor = "#ADD8E6"; // Jail
         } else if (square instanceof CardSquare) {
-            backgroundColor = "#F08080"; // Card (แดงพาสเทล)
+            backgroundColor = "#F08080"; // Card
         } else if (square instanceof AirplaneSquare) {
-            backgroundColor = "#A9A9A9"; // Airport (เทา)
-        } else if (square.getPosition() == 10) {
-            backgroundColor = "#FFFF99"; // Lottery (เหลืองอ่อน)
-        } else if (square.getPosition() == 15) { // Assuming Go To Jail is at 15
-            backgroundColor = "#FFFF99"; // Go To Jail (เหลืองอ่อน)
+            backgroundColor = "#A9A9A9"; // Airport
+        } else if (square instanceof LotterySquare) {
+            backgroundColor = "#FFFF99"; // Lottery
+        } else if (square instanceof GoToJailSquare) {
+            backgroundColor = "#FFA500"; // Go To Jail
         } else if (square instanceof Property) {
             Property property = (Property) square;
             if (property.getOwner() != null) {
@@ -615,7 +742,6 @@ public class GameBoardScreen {
         }
     }
 
-
     private GridPane createBoardGrid() {
         GridPane grid = new GridPane();
         grid.setAlignment(Pos.CENTER);
@@ -644,11 +770,10 @@ public class GameBoardScreen {
     }
 
     private int getIndexFromGrid(int row, int col, int dim) {
-        // Logic to map grid coordinates to a 20-square loop (dim=6)
-        if (row == dim - 1) return dim - 1 - col; // Bottom Row (19 -> 0)
-        if (col == 0 && row >= 1 && row <= 4) return dim - 1 - row + 5; // Left Column (5 -> 9)
-        if (row == 0 && col >= 0 && col <= 5) return col + 10; // Top Row (10 -> 15)
-        if (col == dim - 1 && row >= 1 && row <= 4) return row + 15; // Right Column (16 -> 19)
+        if (row == dim - 1) return dim - 1 - col;
+        if (col == 0 && row >= 1 && row <= 4) return dim - 1 - row + 5;
+        if (row == 0 && col >= 0 && col <= 5) return col + 10;
+        if (col == dim - 1 && row >= 1 && row <= 4) return row + 15;
         return -1;
     }
 
@@ -675,20 +800,18 @@ public class GameBoardScreen {
         try {
             String fileName = CHARACTER_FILES[index];
             String fullPath = RESOURCE_PATH + fileName;
-            // Use getResource() and toExternalForm() for reliable resource loading in JavaFX
-            Image image = new Image(getClass().getResource(fullPath).toExternalForm());
+            Image image = new Image(getClass().getResourceAsStream(fullPath));
             imageView.setImage(image);
             imageView.setFitWidth(50);
             imageView.setPreserveRatio(true);
         } catch (Exception e) {
-            System.err.println("!!! ERROR: ไม่พบไฟล์ภาพตัวละคร: " + CHARACTER_FILES[index] + ". Error: " + e.getMessage());
+            System.err.println("!!! ERROR: ไม่พบไฟล์ภาพตัวละคร: " + CHARACTER_FILES[index]);
             imageView.setFitWidth(50);
         }
         return imageView;
     }
 
     private HBox createPlayerPanel(Player player, int charIndex, boolean isPlayer1) {
-
         ImageView charImageView = createCharacterImageView(charIndex);
         charImageView.setFitWidth(50);
 
