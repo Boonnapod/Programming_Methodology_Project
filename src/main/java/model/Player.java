@@ -92,9 +92,4 @@ public class Player {
             System.out.println("🎉 " + name + " passed Go and collected $200.");
         }
     }
-
-    // สำหรับการวาร์ป (เช่น นั่งเครื่องบิน) โดยไม่ผ่าน Go Logic ปกติ
-    public void warp(int position) {
-        this.position = position;
-    }
 }
