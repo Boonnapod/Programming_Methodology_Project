@@ -45,7 +45,7 @@ public class GameBoardScreen {
 
     // Constants
     private static final String[] CHARACTER_FILES = {
-            "character_01.png", "character_02.png", "character_03.png"
+            "character_01.png", "character_02.png", "character_03.png","character_04.png", "character_05.png", "character_06.png"
     };
     private static final String RESOURCE_PATH = "/Character/";
     private static final int MOVEMENT_DELAY_MS = 300;
