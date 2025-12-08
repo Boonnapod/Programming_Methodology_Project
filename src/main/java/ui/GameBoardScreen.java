@@ -490,23 +490,40 @@ public class GameBoardScreen {
     }
 
     private void showBuyPropertyDialog(Player player, Property property, Button rollButton) {
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("Buy Property");
-        alert.setHeaderText("Unowned Property: " + property.getName());
-        alert.setContentText("Price: $" + property.getPrice() + ". Would you like to buy it?");
+        int price = property.getPrice();
 
-        styleDialog(alert);
+        // 1. ตรวจสอบว่าผู้เล่นมีเงินพอที่จะซื้อหรือไม่
+        if (player.getMoney() >= price) {
 
-        Optional<ButtonType> result = alert.showAndWait();
-        if (result.isPresent() && result.get() == ButtonType.OK) {
-            if (player.deductMoney(property.getPrice())) {
-                property.setOwner(player);
-                updateSquareBox(property);
-            } else {
-                showSimpleAlert("Transaction Failed", "You don't have enough money!");
+            // มีเงินพอ: เปิด Dialog ถามซื้อ
+            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+            alert.setTitle("Buy Property");
+            alert.setHeaderText("Unowned Property: " + property.getName());
+            alert.setContentText("Price: $" + price + ". Would you like to buy it?");
+
+            styleDialog(alert);
+
+            Optional<ButtonType> result = alert.showAndWait();
+
+            // 2. ถ้าผู้เล่นกด OK
+            if (result.isPresent() && result.get() == ButtonType.OK) {
+                // ดำเนินการซื้อ (หักเงินและเปลี่ยนเจ้าของ)
+                if (player.deductMoney(price)) {
+                    property.setOwner(player);
+                    updateSquareBox(property);
+                }
+                // ถ้า deductMoney ล้มเหลว (ซึ่งไม่น่าจะเกิดขึ้นเพราะเช็คเงินแล้ว) ก็จะไม่มีการเปลี่ยนแปลง
             }
-            refreshAllPlayersMoney();
+            // 3. ถ้าผู้เล่นกด Cancel/ปิด Dialog (ไม่ซื้อ) จะจบเทิร์นเลย
+
+        } else {
+            // เงินไม่พอ: แสดงข้อความแจ้งให้ทราบเฉยๆ ว่าซื้อไม่ได้
+            showSimpleAlert("Cannot Afford", property.getName() + " costs $" + price + ". You do not have enough money to buy it.");
+            // **FIX:** ไม่มีการดำเนินการซื้อหรือหักเงินใดๆ
         }
+
+        // อัปเดตเงิน (เผื่อมีการซื้อ) และจบเทิร์น
+        refreshAllPlayersMoney();
         endTurn(player, rollButton);
     }
 
@@ -520,14 +537,25 @@ public class GameBoardScreen {
 
         Optional<ButtonType> result = alert.showAndWait();
         if (result.isPresent() && result.get() == ButtonType.OK) {
-            if (player.deductMoney(property.getUpgradeCost())) {
-                property.setLandmark(true);
-                updateSquareBox(property);
+
+            int cost = property.getUpgradeCost();
+
+            // ตรวจสอบว่าเงินพอหรือไม่ ก่อนพยายามหักเงิน
+            if (player.getMoney() >= cost) {
+                // เงินพอ: ดำเนินการอัปเกรด
+                if (player.deductMoney(cost)) {
+                    property.setLandmark(true);
+                    updateSquareBox(property);
+                }
             } else {
-                showSimpleAlert("Transaction Failed", "Not enough money to upgrade!");
+                // เงินไม่พอ: แสดงข้อความแจ้งว่ายกเลิกการกระทำ
+                showSimpleAlert("Upgrade Failed", "Not enough money to upgrade! (Cost: $" + cost + "). Upgrade is cancelled.");
+                // **FIX:** ไม่มีการหักเงิน และไม่เกิดการล้มละลาย (เพราะเช็คก่อนแล้ว)
             }
             refreshAllPlayersMoney();
         }
+
+        // สิ้นสุดการปฏิสัมพันธ์บนช่องนี้ ไม่ว่าจะอัปเกรดสำเร็จ ยกเลิก หรือเงินไม่พอ
         endTurn(player, rollButton);
     }
 
