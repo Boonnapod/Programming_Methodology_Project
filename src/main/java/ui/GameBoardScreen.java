@@ -842,8 +842,8 @@ public class GameBoardScreen {
             backgroundColor = "#A9A9A9"; // Airport
         } else if (square instanceof LotterySquare) {
             backgroundColor = "#FFFF99"; // Lottery
-        } else if (square instanceof GoToJailSquare) {
-            backgroundColor = "#FFA500"; // Go To Jail
+        //} else if (square instanceof GoToJailSquare) {
+            //backgroundColor = "#FFA500"; // Go To Jail
         } else if (square instanceof Property) {
             Property property = (Property) square;
             if (property.getOwner() != null) {

@@ -1,7 +1,6 @@
 package grader.model.square;
 
 import model.Player;
-import model.squares.GoToJailSquare;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 

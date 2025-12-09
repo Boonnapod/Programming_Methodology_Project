@@ -1,4 +1,10 @@
 @startuml
+class grader.game.DiceTest {
+~ void testRoll_ReturnsValidRange()
+~ void testForcedResult_Works()
+~ void testForcedResult_ResetsAfterOneRoll()
+}
+
 class model.squares.TaxSquare {
 - Random random
 - int lastTaxPaid
@@ -7,27 +13,20 @@ class model.squares.TaxSquare {
 }
 
 
-class ui.CharacterSelectScreen {
-- Stage primaryStage
-- GameController gameController
-- {static} String[] CHARACTER_FILES
-- {static} String RESOURCE_PATH
-- {static} int MAX_CHARACTERS
-- int player1Index
-- int player2Index
-- ImageView player1ImageView
-- ImageView player2ImageView
-+ Scene createCharacterSelectScene()
-- VBox createPlayerSelectionBox(String,ImageView,boolean)
-- void changeCharacter(boolean,int)
-- void updateCharacterImage(ImageView,int)
-}
-
-
-class ui.SoundManager {
-- {static} MediaPlayer currentBGM
-+ {static} void playBGM(String)
-+ {static} void stopBGM()
+class grader.game.GameControllerTest {
+- GameController controller
+- InputStream originalSystemIn
+~ void setUp()
+~ void tearDown()
+- void provideInput(String)
+~ void testMoveToNextPlayer()
+~ void testAirplaneMovement_Forward()
+~ void testAirplaneMovement_WrapAround()
+~ void testHandleBankruptcy()
+~ void testBuyProperty_Success()
+~ void testBuyProperty_NotEnoughMoney()
+~ void testPayRent_And_RefuseBuyout()
+~ void testUpgradeLandmark_Success()
 }
 
 
@@ -92,16 +91,6 @@ class model.squares.GoSquare {
 + void landOn(Player)
 }
 
-class model.Board {
-- List<Square> squares
-- {static} int BOARD_SIZE
-- void initializeBoard()
-+ Square getSquare(int)
-+ List<Square> getSquares()
-+ int getBoardSize()
-}
-
-
 class model.squares.Property {
 - int price
 - int baseRent
@@ -116,6 +105,65 @@ class model.squares.Property {
 + boolean isLandmark()
 + void setOwner(Player)
 + void setLandmark(boolean)
+}
+
+
+class game.Dice {
+- Random random
+- int forcedResult
++ void setForcedResult(int)
++ int roll()
+}
+
+
+class model.cards.ReceiveMoneyCard {
+- int amount
++ void execute(Player,Board)
+}
+
+
+class ui.GameMenu {
+- Stage primaryStage
+- {static} String COVER_IMAGE_PATH
++ Scene createMenuScene()
+}
+
+
+class model.squares.CardSquare {
++ void landOn(Player)
+}
+
+class ui.CharacterSelectScreen {
+- Stage primaryStage
+- GameController gameController
+- {static} String[] CHARACTER_FILES
+- {static} String RESOURCE_PATH
+- {static} int MAX_CHARACTERS
+- int player1Index
+- int player2Index
+- ImageView player1ImageView
+- ImageView player2ImageView
++ Scene createCharacterSelectScene()
+- VBox createPlayerSelectionBox(String,ImageView,boolean)
+- void changeCharacter(boolean,int)
+- void updateCharacterImage(ImageView,int)
+}
+
+
+class ui.SoundManager {
+- {static} MediaPlayer currentBGM
++ {static} void playBGM(String)
++ {static} void stopBGM()
+}
+
+
+class model.Board {
+- List<Square> squares
+- {static} int BOARD_SIZE
+- void initializeBoard()
++ Square getSquare(int)
++ List<Square> getSquares()
++ int getBoardSize()
 }
 
 
@@ -191,14 +239,6 @@ class model.squares.JailSquare {
 + void landOn(Player)
 }
 
-class game.Dice {
-- Random random
-- int forcedResult
-+ void setForcedResult(int)
-+ int roll()
-}
-
-
 class ui.Main {
 + {static} int WIDTH
 + {static} int HEIGHT
@@ -218,16 +258,12 @@ class game.CardManager {
 }
 
 
-class model.cards.ReceiveMoneyCard {
-- int amount
-+ void execute(Player,Board)
-}
-
-
-class ui.GameMenu {
-- Stage primaryStage
-- {static} String COVER_IMAGE_PATH
-+ Scene createMenuScene()
+class grader.game.CardManagerTest {
+- CardManager cardManager
+~ void setUp()
+~ void testDrawCard_NotNull()
+~ void testDrawCard_InfiniteDeck()
+~ void testDeckInitialization()
 }
 
 
@@ -242,14 +278,6 @@ abstract class model.squares.Square {
 
 interface model.squares.Rentable {
 ~ int calculateRent(int)
-}
-
-class model.squares.CardSquare {
-+ void landOn(Player)
-}
-
-class model.squares.GoToJailSquare {
-+ void landOn(Player)
 }
 
 class model.squares.LotterySquare {
@@ -279,13 +307,12 @@ model.squares.Square <|-- model.squares.TaxSquare
 model.squares.Square <|-- model.squares.GoSquare
 model.squares.Rentable <|.. model.squares.Property
 model.squares.Square <|-- model.squares.Property
+model.cards.Card <|-- model.cards.ReceiveMoneyCard
+model.squares.Square <|-- model.squares.CardSquare
 model.cards.Card <|-- model.cards.MoveToAirPlane
 model.squares.Square <|-- model.squares.JailSquare
 javafx.application.Application <|-- ui.Main
 model.squares.Square <|-- model.squares.AirplaneSquare
-model.cards.Card <|-- model.cards.ReceiveMoneyCard
-model.squares.Square <|-- model.squares.CardSquare
-model.squares.Square <|-- model.squares.GoToJailSquare
 model.squares.Square <|-- model.squares.LotterySquare
 model.cards.Card <|-- model.cards.SkipTurnCard
 @enduml
