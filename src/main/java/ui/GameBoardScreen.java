@@ -302,7 +302,7 @@ public class GameBoardScreen {
                         if (newPosition == 0 && oldPosition != 0) {
                             player.addMoney(20);
                             refreshAllPlayersMoney();
-                            System.out.println(player.getName() + " passed Go! Collected $200.");
+                            System.out.println(player.getName() + " passed Go! Collected $20.");
                         }
                         updatePlayerTokens();
                     }
@@ -494,16 +494,16 @@ public class GameBoardScreen {
             LotterySquare lotterySq = (LotterySquare) landedSquare;
             showSimpleAlert("Lottery", "You won the lottery! Prize: $" + lotterySq.getLastPrize());
 
-        } else if (landedSquare instanceof GoToJailSquare) {
-            showSimpleAlert("Arrested", "You are going to Jail!");
-            updatePlayerTokens();
+        //} else if (landedSquare instanceof GoToJailSquare) {
+            //showSimpleAlert("Arrested", "You are going to Jail!");
+            //updatePlayerTokens();
 
         } else if (landedSquare instanceof JailSquare) {
             if (player.isInJail()) {
                 showSimpleAlert("Jail", "You are in Jail!");
-            } else {
-                showSimpleAlert("Jail", "Just Visiting.");
-            }
+            } //else {
+            //    showSimpleAlert("Jail", "Just Visiting.");
+            //}
         }
 
         endTurn(player, rollButton);

@@ -37,12 +37,12 @@ public class CardManager {
     }
 
     public Card drawCard() {
-        if (deck.isEmpty()) {
-            // สร้างกองการ์ดใหม่หากหมด
-            System.out.println("Deck is empty, reshuffling new cards.");
-            initializeDeck(new ArrayList<>()); // สามารถส่ง Player list ที่ถูกต้องได้ถ้าต้องการ
-            Collections.shuffle(deck);
-        }
+        //if (deck.isEmpty()) {
+        //    // สร้างกองการ์ดใหม่หากหมด
+        //    System.out.println("Deck is empty, reshuffling new cards.");
+        //    initializeDeck(new ArrayList<>()); // สามารถส่ง Player list ที่ถูกต้องได้ถ้าต้องการ
+        //    Collections.shuffle(deck);
+        //}
 
         // จั่วการ์ดจากด้านบน
         Card drawnCard = deck.remove(0);

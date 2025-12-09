@@ -1,15 +1,9 @@
 @startuml
-class model.cards.ReceiveMoneyCard {
-- int amount
-+ void execute(Player,Board)
-}
-
-
-class model.squares.LotterySquare {
+class model.squares.TaxSquare {
 - Random random
-- int lastPrize
+- int lastTaxPaid
 + void landOn(Player)
-+ int getLastPrize()
++ int getLastTaxPaid()
 }
 
 
@@ -27,85 +21,6 @@ class ui.CharacterSelectScreen {
 - VBox createPlayerSelectionBox(String,ImageView,boolean)
 - void changeCharacter(boolean,int)
 - void updateCharacterImage(ImageView,int)
-}
-
-
-class model.squares.AirplaneSquare {
-+ void landOn(Player)
-}
-
-interface model.squares.Rentable {
-~ int calculateRent(int)
-}
-
-abstract class model.cards.Card {
-- String description
-+ String getDescription()
-+ {abstract}void execute(Player,Board)
-}
-
-
-class model.cards.MoveToAirPlane {
-- {static} int AIRPLANE_POSITION
-+ void execute(Player,Board)
-}
-
-
-class game.GameController {
-- Board board
-- Dice dice
-- List<Player> players
-- CardManager cardManager
-- int currentPlayerIndex
-- Scanner scanner
-+ void setupGame()
-+ void startGameLoop()
-- Player getNextPlayer()
-+ Player getCurrentPlayer()
-+ void moveToNextPlayer()
-- void handleBankruptcy(Player)
-- void handleSkipTurn(Player)
-- boolean handleJailTurn(Player)
-- void takeNormalTurn(Player)
-- void handleLandedSquareAction(Player)
-- void handlePropertySquare(Player,Property)
-- void handleAirplaneSquare(Player)
-+ void handleAirplaneAction(Player,int)
-+ List<Player> getPlayers()
-+ Board getBoard()
-+ Dice getDice()
-+ CardManager getCardManager()
-+ int getCurrentPlayerIndex()
-+ Scanner getScanner()
-}
-
-
-class ui.GameMenu {
-- Stage primaryStage
-- {static} String COVER_IMAGE_PATH
-+ Scene createMenuScene()
-}
-
-
-class game.Dice {
-- Random random
-- int forcedResult
-+ void setForcedResult(int)
-+ int roll()
-}
-
-
-class model.cards.SkipTurnCard {
-- int turnsToSkip
-+ void execute(Player,Board)
-}
-
-
-class model.squares.TaxSquare {
-- Random random
-- int lastTaxPaid
-+ void landOn(Player)
-+ int getLastTaxPaid()
 }
 
 
@@ -140,6 +55,67 @@ class model.Player {
 + void decrementJailTurns()
 + void move(int)
 + void warp(int)
++ void setPosition(int)
+}
+
+
+class game.GameController {
+- Board board
+- Dice dice
+- List<Player> players
+- CardManager cardManager
+- int currentPlayerIndex
+- Scanner scanner
++ void setupGame()
++ void startGameLoop()
++ Player getNextPlayer()
++ Player getCurrentPlayer()
++ void moveToNextPlayer()
++ void handleBankruptcy(Player)
++ void handleSkipTurn(Player)
++ boolean handleJailTurn(Player)
++ void takeNormalTurn(Player)
++ void handleLandedSquareAction(Player)
++ void handlePropertySquare(Player,Property)
++ void handleAirplaneSquare(Player)
++ void handleAirplaneAction(Player,int)
++ List<Player> getPlayers()
++ Board getBoard()
++ Dice getDice()
++ CardManager getCardManager()
++ int getCurrentPlayerIndex()
++ Scanner getScanner()
+}
+
+
+class model.squares.GoSquare {
++ void landOn(Player)
+}
+
+class model.Board {
+- List<Square> squares
+- {static} int BOARD_SIZE
+- void initializeBoard()
++ Square getSquare(int)
++ List<Square> getSquares()
++ int getBoardSize()
+}
+
+
+class model.squares.Property {
+- int price
+- int baseRent
+- int upgradeCost
+- Player owner
+- boolean isLandmark
++ void landOn(Player)
++ int calculateRent(int)
++ int getPrice()
++ int getUpgradeCost()
++ Player getOwner()
++ boolean isLandmark()
++ void setOwner(Player)
++ void setLandmark(boolean)
 }
 
 
@@ -205,13 +181,53 @@ class ui.GameBoardScreen {
 }
 
 
-class model.Board {
-- List<Square> squares
-- {static} int BOARD_SIZE
-- void initializeBoard()
-+ Square getSquare(int)
-+ List<Square> getSquares()
-+ int getBoardSize()
+class model.cards.MoveToAirPlane {
+- {static} int AIRPLANE_POSITION
++ void execute(Player,Board)
+}
+
+
+class model.squares.JailSquare {
++ void landOn(Player)
+}
+
+class game.Dice {
+- Random random
+- int forcedResult
++ void setForcedResult(int)
++ int roll()
+}
+
+
+class ui.Main {
++ {static} int WIDTH
++ {static} int HEIGHT
++ void start(Stage)
++ {static} void main(String[])
+}
+
+
+class model.squares.AirplaneSquare {
++ void landOn(Player)
+}
+
+class game.CardManager {
+- List<Card> deck
+- void initializeDeck(List<Player>)
++ Card drawCard()
+}
+
+
+class model.cards.ReceiveMoneyCard {
+- int amount
++ void execute(Player,Board)
+}
+
+
+class ui.GameMenu {
+- Stage primaryStage
+- {static} String COVER_IMAGE_PATH
++ Scene createMenuScene()
 }
 
 
@@ -224,67 +240,52 @@ abstract class model.squares.Square {
 }
 
 
-class model.squares.GoToJailSquare {
-+ void landOn(Player)
+interface model.squares.Rentable {
+~ int calculateRent(int)
 }
-
-class ui.Main {
-+ {static} int WIDTH
-+ {static} int HEIGHT
-+ void start(Stage)
-+ {static} void main(String[])
-}
-
-
-class model.squares.Property {
-- int price
-- int baseRent
-- int upgradeCost
-- Player owner
-- boolean isLandmark
-+ void landOn(Player)
-+ int calculateRent(int)
-+ int getPrice()
-+ int getUpgradeCost()
-+ Player getOwner()
-+ boolean isLandmark()
-+ void setOwner(Player)
-+ void setLandmark(boolean)
-}
-
 
 class model.squares.CardSquare {
 + void landOn(Player)
 }
 
-class model.squares.GoSquare {
+class model.squares.GoToJailSquare {
 + void landOn(Player)
 }
 
-class model.squares.JailSquare {
+class model.squares.LotterySquare {
+- Random random
+- int lastPrize
 + void landOn(Player)
-}
-
-class game.CardManager {
-- List<Card> deck
-- void initializeDeck(List<Player>)
-+ Card drawCard()
++ int getLastPrize()
 }
 
 
+class model.cards.SkipTurnCard {
+- int turnsToSkip
++ void execute(Player,Board)
+}
 
 
-model.cards.Card <|-- model.cards.ReceiveMoneyCard
-model.squares.Square <|-- model.squares.LotterySquare
-model.squares.Square <|-- model.squares.AirplaneSquare
-model.cards.Card <|-- model.cards.MoveToAirPlane
-model.cards.Card <|-- model.cards.SkipTurnCard
+abstract class model.cards.Card {
+- String description
++ String getDescription()
++ {abstract}void execute(Player,Board)
+}
+
+
+
+
 model.squares.Square <|-- model.squares.TaxSquare
-model.squares.Square <|-- model.squares.GoToJailSquare
-javafx.application.Application <|-- ui.Main
+model.squares.Square <|-- model.squares.GoSquare
 model.squares.Rentable <|.. model.squares.Property
 model.squares.Square <|-- model.squares.Property
-model.squares.Square <|-- model.squares.CardSquare
-model.squares.Square <|-- model.squares.GoSquare
+model.cards.Card <|-- model.cards.MoveToAirPlane
 model.squares.Square <|-- model.squares.JailSquare
+javafx.application.Application <|-- ui.Main
+model.squares.Square <|-- model.squares.AirplaneSquare
+model.cards.Card <|-- model.cards.ReceiveMoneyCard
+model.squares.Square <|-- model.squares.CardSquare
+model.squares.Square <|-- model.squares.GoToJailSquare
+model.squares.Square <|-- model.squares.LotterySquare
+model.cards.Card <|-- model.cards.SkipTurnCard
 @enduml

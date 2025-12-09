@@ -12,6 +12,6 @@ public class JailSquare extends Square {
         // *** ลบ หรือ Comment บรรทัดนี้ออกครับ ไม่งั้นเดินตกเฉยๆ ก็จะติดคุก ***
         // player.setInJail(true);
 
-        System.out.println(player.getName() + " is just visiting Jail.");
+        System.out.println(player.getName() + " is in Jail.");
     }
 }

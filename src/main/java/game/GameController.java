@@ -108,7 +108,7 @@ public class GameController {
         }
     }
 
-    private Player getNextPlayer() {
+    public Player getNextPlayer() {
         int initialIndex = currentPlayerIndex;
         do {
             if (currentPlayerIndex >= players.size()) {
@@ -138,7 +138,7 @@ public class GameController {
     /**
      * เมธอดสำหรับจัดการการล้มละลาย (Landmark ถูกปล่อยคืนสู่กระดาน)
      */
-    private void handleBankruptcy(Player player) {
+    public void handleBankruptcy(Player player) {
         System.out.println("******************************************");
         System.out.println(player.getName() + " is BANKRUPT!");
         System.out.println("******************************************");
@@ -163,7 +163,7 @@ public class GameController {
         }
     }
 
-    private void handleSkipTurn(Player player) {
+    public void handleSkipTurn(Player player) {
         System.out.println(player.getName() + " must skip this turn due to Card Action. Turns left to skip: " + (player.getSkipTurns() - 1));
         player.setSkipTurns(player.getSkipTurns() - 1);
     }
@@ -172,7 +172,7 @@ public class GameController {
      * จัดการ Logic การอยู่ในคุก
      * @return true ถ้าผู้เล่นจ่ายเงินและต้องเล่นเทิร์นปกติในรอบนี้
      */
-    private boolean handleJailTurn(Player player) {
+    public boolean handleJailTurn(Player player) {
         System.out.println(player.getName() + " is in Jail. Pay $50 to get out (y/n)?");
         String choice = scanner.nextLine().toLowerCase();
 
@@ -192,7 +192,7 @@ public class GameController {
         return false; // แจ้งว่าผู้เล่นไม่ได้เล่นเทิร์นปกติ
     }
 
-    private void takeNormalTurn(Player player) {
+    public void takeNormalTurn(Player player) {
         int totalRoll = dice.roll();
         System.out.println(player.getName() + " rolled (" + totalRoll + ")");
 
@@ -201,7 +201,7 @@ public class GameController {
         handleLandedSquareAction(player);
     }
 
-    private void handleLandedSquareAction(Player player) {
+    public void handleLandedSquareAction(Player player) {
         Square landedSquare = board.getSquare(player.getPosition());
         System.out.println("Landed on: " + landedSquare.getName() + " (Position: " + landedSquare.getPosition() + ")");
 
@@ -237,7 +237,7 @@ public class GameController {
     /**
      * เมธอดสำหรับจัดการ Logic การซื้อ/เช่า/อัพเกรด/Buyout Property
      */
-    private void handlePropertySquare(Player player, Property property) {
+    public void handlePropertySquare(Player player, Property property) {
         Player owner = property.getOwner();
 
         // 1. Logic การจ่ายค่าเช่า (และยึดทรัพย์สิน/Buyout)
@@ -327,7 +327,7 @@ public class GameController {
     }
 
 
-    private void handleAirplaneSquare(Player player) {
+    public void handleAirplaneSquare(Player player) {
         List<Square> squares = board.getSquares();
 
         System.out.println("\n--- AIRPLANE TRAVEL ---");

@@ -76,5 +76,5 @@ jar {
     }
 
     // Set archive name
-    archiveFileName = "${project.name}-${project.version}-with-sources.jar"
+    archiveFileName = "GameYajok-1-with-sources.jar"
 }

@@ -88,13 +88,17 @@ public class Player {
 
         // ตรวจสอบการผ่าน Go (ช่อง 0)
         if (oldPosition + steps >= SMALL_BOARD_SIZE) {
-            addMoney(200);
-            System.out.println("🎉 " + name + " passed Go and collected $200.");
+            addMoney(20);
+            System.out.println("🎉 " + name + " passed Go and collected $20.");
         }
     }
 
     // สำหรับการวาร์ป (เช่น นั่งเครื่องบิน) โดยไม่ผ่าน Go Logic ปกติ
     public void warp(int position) {
+        this.position = position;
+    }
+
+    public void setPosition(int position) {
         this.position = position;
     }
 }
