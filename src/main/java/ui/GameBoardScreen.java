@@ -359,26 +359,35 @@ public class GameBoardScreen {
 
     private void handlePropertyAction(Player player, Property property, Button rollButton) {
         if (property.getOwner() != null && property.getOwner() != player) {
-            // Pay Rent
+            // Pay Rent (บังคับจ่าย, ห้ามมีปุ่ม Cancel)
             int rent = property.calculateRent(0);
-            Alert rentAlert = new Alert(Alert.AlertType.CONFIRMATION);
-            rentAlert.setTitle("Property Owned");
-            rentAlert.setHeaderText("Pay Rent! $" + rent);
-            rentAlert.setContentText(player.getName() + " landed on " + property.getOwner().getName() + "'s property (" + property.getName() + "). Pay rent now?");
+
+            // 1. สร้าง Alert พร้อมตั้งค่าให้เหลือแค่ปุ่ม OK เท่านั้น
+            Alert rentAlert = new Alert(Alert.AlertType.WARNING); // ใช้ WARNING เพื่อเน้นย้ำถึงค่าปรับ
+            rentAlert.setTitle("Mandatory Rent Payment");
+            rentAlert.setHeaderText("PAY RENT! $" + rent);
+            rentAlert.setContentText(player.getName() + " landed on " + property.getOwner().getName() + "'s property (" + property.getName() + "). Payment is mandatory.");
+
+            // บังคับให้มีแค่ปุ่ม OK เพื่อยอมรับเท่านั้น
+            rentAlert.getButtonTypes().setAll(ButtonType.OK);
 
             styleDialog(rentAlert);
+            rentAlert.showAndWait(); // บังคับให้ผู้เล่นต้องกด OK เพื่อดำเนินการต่อ
 
-            Optional<ButtonType> rentResult = rentAlert.showAndWait();
-            if (rentResult.isPresent() && rentResult.get() == ButtonType.OK) {
-                if (player.deductMoney(rent)) {
-                    property.getOwner().addMoney(rent);
-                } else {
-                    player.addMoney(-player.getMoney()); // Bankrupt logic start
-                }
-                refreshAllPlayersMoney();
+            // 2. ดำเนินการหักเงินและจ่ายค่าเช่าทันที
+            if (player.deductMoney(rent)) {
+                // จ่ายสำเร็จ
+                property.getOwner().addMoney(rent);
+            } else {
+                // เงินไม่พอ: เข้าสู่กระบวนการล้มละลาย (จ่ายเงินที่มีทั้งหมด)
+                int moneyToPay = player.getMoney();
+                property.getOwner().addMoney(moneyToPay);
+                player.addMoney(-moneyToPay); // หักเงินทั้งหมดจนเหลือ 0 (เริ่มต้น Bankrupt Logic)
             }
+            refreshAllPlayersMoney();
 
-            // Buyout Logic
+            // Buyout Logic (ส่วนนี้ทำงานต่อจาก Payment ทันที)
+            // ... (โค้ด Buyout Logic เดิม) ...
             if (player.getMoney() > 0 && !property.isLandmark()) {
                 int buyoutPrice = (int)( property.getPrice() * 1.5);
                 if (player.getMoney() >= buyoutPrice) {
