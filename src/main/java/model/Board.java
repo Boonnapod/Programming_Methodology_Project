@@ -65,7 +65,7 @@ public class Board {
 
         squares.set(16, new Property("AYUTTHAYA", 16, 250, 125));
         squares.set(17, new Property("SARABURI", 17, 270, 135));
-        squares.set(18, new Property("YALA", 18, 280, 140));
+        squares.set(18, new IslandSquare("PHUKET ISLAND", 18, 280, 140));
 
         // ****************************************************************
         // 5. แก้ไขตำแหน่ง 19 กลับเป็น BANGKOK ตามที่ต้องการ

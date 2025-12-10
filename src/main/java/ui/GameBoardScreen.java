@@ -348,6 +348,8 @@ public class GameBoardScreen {
         // 2. Logic UI (Polymorphism)
         if (landedSquare instanceof Property) {
             handlePropertyAction(player, (Property) landedSquare, rollButton);
+        } else if (landedSquare instanceof IslandSquare) {  // *** เพิ่มบรรทัดนี้ ***
+            handleIslandAction(player, (IslandSquare) landedSquare, rollButton);  // *** และบรรทัดนี้ ***
         } else if (landedSquare instanceof CardSquare) {
             handleCardAction(player, rollButton);
         } else if (landedSquare instanceof AirplaneSquare) {
@@ -1082,7 +1084,13 @@ public class GameBoardScreen {
             fileName = "bag.png";
         } else if (square instanceof JailSquare) {
             fileName = "jail.png";
-        } else if (square instanceof AirplaneSquare) {
+        }else if (square instanceof IslandSquare) {
+            IslandSquare island = (IslandSquare) square;
+            if (island.getOwner() != null) {
+                fileName = "island.png"; // You'll need to add this image to /Image/
+            }
+        }
+        else if (square instanceof AirplaneSquare) {
             fileName = "plane.png";
         } else if (square instanceof CardSquare) {
             fileName = "q.png";
@@ -1214,5 +1222,63 @@ public class GameBoardScreen {
         executeRollAndMove(activePlayer, rollButton);
 
         System.out.println("TEST MOVE: " + activePlayer.getName() + " forces roll to " + steps + " steps (Key: " + steps + ")");
+    }
+    private void handleIslandAction(Player player, IslandSquare island, Button rollButton) {
+        if (island.getOwner() != null && island.getOwner() != player) {
+            // จ่ายค่าเช่า (บังคับ)
+            int rent = island.calculateRent(0);
+
+            Alert rentAlert = new Alert(Alert.AlertType.WARNING);
+            rentAlert.setTitle("Island Rent");
+            rentAlert.setHeaderText("🏝️ PAY ISLAND RENT! $" + rent);
+            rentAlert.setContentText(player.getName() + " landed on " + island.getOwner().getName() + "'s island (" + island.getName() + ").");
+            rentAlert.getButtonTypes().setAll(ButtonType.OK);
+            styleDialog(rentAlert);
+            rentAlert.showAndWait();
+
+            if (player.deductMoney(rent)) {
+                island.getOwner().addMoney(rent);
+            } else {
+                int moneyToPay = player.getMoney();
+                island.getOwner().addMoney(moneyToPay);
+                player.addMoney(-moneyToPay);
+            }
+            refreshAllPlayersMoney();
+            endTurn(player, rollButton);
+
+        } else if (island.getOwner() == player) {
+            // เจ้าของเอง ไม่มีอะไรเกิดขึ้น
+            showSimpleAlert("Your Island", "Welcome back to your island: " + island.getName() + "!");
+            endTurn(player, rollButton);
+
+        } else {
+            // ยังไม่มีเจ้าของ ให้ซื้อ
+            showBuyIslandDialog(player, island, rollButton);
+        }
+    }
+
+    private void showBuyIslandDialog(Player player, IslandSquare island, Button rollButton) {
+        int price = island.getPrice();
+
+        if (player.getMoney() >= price) {
+            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+            alert.setTitle("Buy Island");
+            alert.setHeaderText("🏝️ Unowned Island: " + island.getName());
+            alert.setContentText("Price: $" + price + "\nRent: $" + island.getRent() + "\n\nWould you like to buy it?");
+            styleDialog(alert);
+
+            Optional<ButtonType> result = alert.showAndWait();
+            if (result.isPresent() && result.get() == ButtonType.OK) {
+                if (player.deductMoney(price)) {
+                    island.setOwner(player);
+                    updateSquareBox(island);
+                }
+            }
+        } else {
+            showSimpleAlert("Cannot Afford", island.getName() + " costs $" + price + ". You do not have enough money.");
+        }
+
+        refreshAllPlayersMoney();
+        endTurn(player, rollButton);
     }
 }
