@@ -4,41 +4,49 @@ import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
 import java.net.URL;
 
+/**
+ * Manages the playback of Background Music (BGM) for the application.
+ * <p>
+ * This utility class uses a static {@link MediaPlayer} to ensure only one BGM track plays at a time.
+ * It handles loading audio files from resources, looping them, and managing volume.
+ * </p>
+ */
 public class SoundManager {
 
-    // ตัวแปรเก็บ MediaPlayer ตัวปัจจุบัน (static เพื่อให้เข้าถึงได้จากทุกหน้า)
+    // Holds the current media player instance (static to be accessible globally)
     private static MediaPlayer currentBGM;
 
     /**
-     * สั่งเล่นเพลง BGM ใหม่ (เพลงเก่าจะหยุดอัตโนมัติ)
-     * @param fileName ชื่อไฟล์ในโฟลเดอร์ /soundfx/
+     * Plays a new BGM track, automatically stopping any currently playing track.
+     *
+     * @param fileName The name of the audio file (including extension) located in the {@code /soundfx/} resource folder.
      */
     public static void playBGM(String fileName) {
         try {
-            // 1. ถ้ามีเพลงเก่าเล่นอยู่ ให้หยุดก่อน
+            // 1. Stop existing music if playing
             if (currentBGM != null) {
                 currentBGM.stop();
-                currentBGM.dispose(); // คืน resource
+                currentBGM.dispose(); // Release resources
             }
 
-            // 2. โหลดไฟล์เสียงใหม่
+            // 2. Load the new sound file
             URL resource = SoundManager.class.getResource("/soundfx/" + fileName);
             if (resource == null) {
-                System.err.println("!!! ไม่พบไฟล์ BGM: /soundfx/" + fileName);
+                System.err.println("!!! BGM not found: /soundfx/" + fileName);
                 return;
             }
 
-            // 3. สร้าง MediaPlayer
+            // 3. Create MediaPlayer
             Media media = new Media(resource.toExternalForm());
             currentBGM = new MediaPlayer(media);
 
-            // 4. ตั้งค่าให้วนลูป (Loop Indefinitely)
+            // 4. Set to loop indefinitely
             currentBGM.setCycleCount(MediaPlayer.INDEFINITE);
 
-            // 5. ปรับความดัง (0.0 - 1.0) ปรับได้ตามชอบ
+            // 5. Set volume (0.0 - 1.0)
             currentBGM.setVolume(0.5);
 
-            // 6. เล่นเพลง
+            // 6. Start playing
             currentBGM.play();
             System.out.println(">> Playing BGM: " + fileName);
 
@@ -49,7 +57,8 @@ public class SoundManager {
     }
 
     /**
-     * สั่งหยุดเพลง (ใช้ตอนจบเกม หรือปิดโปรแกรม)
+     * Stops the currently playing BGM.
+     * Useful when the game ends or when exiting the application.
      */
     public static void stopBGM() {
         if (currentBGM != null) {

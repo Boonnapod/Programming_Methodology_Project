@@ -11,6 +11,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
+/**
+ * The main controller class for the Inverse Monopoly game.
+ * <p>
+ * This class handles the core game loop, player turns, board interactions,
+ * and game state management including win/loss conditions (Bankruptcy).
+ * </p>
+ */
 public class GameController {
     private final Board board;
     private final Dice dice;
@@ -19,6 +26,9 @@ public class GameController {
     private int currentPlayerIndex;
     private final Scanner scanner;
 
+    /**
+     * Initializes the game controller, sets up the board, players, dice, and card manager.
+     */
     public GameController() {
         this.board = new Board();
         this.players = new ArrayList<>();
@@ -31,6 +41,9 @@ public class GameController {
         this.scanner = new Scanner(System.in);
     }
 
+    /**
+     * Displays the initial game setup information and lists the participating players.
+     */
     public void setupGame() {
         System.out.println("--- Inverse Monopoly Game Setup (20 Squares) ---");
         System.out.println("Goal: Be the first player to go BANKRUPT!");
@@ -39,11 +52,18 @@ public class GameController {
         players.forEach(p -> System.out.println("- " + p.getName() + " (Start Money: $" + p.getMoney() + ")"));
     }
 
+    /**
+     * Starts the main game loop.
+     * <p>
+     * The loop continues until the win condition is met (only one player remains with money,
+     * or a player goes bankrupt depending on the game rules).
+     * </p>
+     */
     public void startGameLoop() {
         setupGame();
 
         int turnCount = 0;
-        // ไม่จำกัดรอบในการเล่น: วนไปเรื่อยๆ จนกว่าจะมีผู้เล่นเหลือคนเดียว (ผู้แพ้)
+        // Game continues until specific conditions are met
         while (players.stream().filter(p -> p.getMoney() > 0).count() > 1) {
 
             Player currentPlayer = getNextPlayer();
@@ -53,19 +73,13 @@ public class GameController {
                     + " (Money: $" + currentPlayer.getMoney()
                     + ", Pos: " + currentPlayer.getPosition() + ") ---");
 
-            // *** FIX: ตรวจสอบสถานะ Skip Turn ก่อนสั่งรอ Input ***
+            // Check skip turn status
             if (currentPlayer.getSkipTurns() > 0) {
                 handleSkipTurn(currentPlayer);
-
-                // เปลี่ยน Index ไปคนถัดไปทันที
                 currentPlayerIndex = (currentPlayerIndex + 1) % players.size();
-
-                // ใช้ continue เพื่อเริ่มลูปใหม่ (ข้ามไปตาคนถัดไป) โดยไม่ต้องรอ Enter
                 continue;
             }
 
-            // *** Bug Fix: ลบบรรทัดรอ Enter ก่อนเริ่มเทิร์นเพื่อแก้ปัญหา Enter 2 ครั้ง ***
-            // โปรแกรมจะรอ Input เมื่อ Logic ต้องการ (ซื้อ, ออกคุก, เครื่องบิน)
             System.out.println("Press Enter to start turn...");
             scanner.nextLine();
 
@@ -75,7 +89,6 @@ public class GameController {
                 handleSkipTurn(currentPlayer);
                 turnPlayed = true;
             } else if (currentPlayer.isInJail()) {
-                // Bug Fix: handleJailTurn คืนค่า boolean เพื่อบอกว่าผู้เล่นควรเล่นเทิร์นปกติหรือไม่
                 if (handleJailTurn(currentPlayer)) {
                     if(!currentPlayer.isInJail())
                         takeNormalTurn(currentPlayer);
@@ -83,21 +96,19 @@ public class GameController {
                 }
             }
 
-            // Bug Fix: เล่นเทิร์นปกติก็ต่อเมื่อยังไม่มีการดำเนินการใดๆ (เช่น ออกจากคุก)
             if (!turnPlayed) {
                 takeNormalTurn(currentPlayer);
             }
 
-            // Logic ผู้ชนะ: ตรวจสอบการล้มละลายหลังจบเทิร์น
+            // Check for bankruptcy after turn
             if (currentPlayer.getMoney() <= 0) {
                 handleBankruptcy(currentPlayer);
             } else {
-                // ถ้าไม่ล้มละลาย ให้เลื่อน index ไปผู้เล่นคนถัดไป
                 currentPlayerIndex = (currentPlayerIndex + 1) % players.size();
             }
         }
 
-        // Logic ผู้ชนะ (Inverse Monopoly Final Check)
+        // End game logic
         System.out.println("\n--- Game Over ---");
         Player loser = players.stream().filter(p -> p.getMoney() > 0).findFirst().orElse(null);
         if (loser != null) {
@@ -108,6 +119,11 @@ public class GameController {
         }
     }
 
+    /**
+     * Retrieves the next valid player in the turn rotation.
+     *
+     * @return The next {@link Player} object, or null if no players are available.
+     */
     public Player getNextPlayer() {
         int initialIndex = currentPlayerIndex;
         do {
@@ -123,20 +139,33 @@ public class GameController {
         return null;
     }
 
-    // *** NEW: Method for GUI to get the current player (Fixes Error 1 & 12) ***
+    /**
+     * Gets the player whose turn it currently is.
+     * Used primarily by the GUI to update the display.
+     *
+     * @return The current {@link Player}.
+     */
     public Player getCurrentPlayer() {
         if (players.isEmpty()) return null;
         return players.get(currentPlayerIndex);
     }
 
-    // *** NEW: Method for GUI to advance to the next player (Fixes Error 3, 4, 5, 6, 7, 8, 9, 11) ***
+    /**
+     * Advances the game to the next player's turn manually.
+     */
     public void moveToNextPlayer() {
         if (players.isEmpty()) return;
         currentPlayerIndex = (currentPlayerIndex + 1) % players.size();
     }
 
     /**
-     * เมธอดสำหรับจัดการการล้มละลาย (Landmark ถูกปล่อยคืนสู่กระดาน)
+     * Handles the bankruptcy process for a player.
+     * <p>
+     * This method announces the winner/loser, returns the player's properties to the board,
+     * resets property statuses (removes landmarks), and removes the player from the game.
+     * </p>
+     *
+     * @param player The player who has gone bankrupt.
      */
     public void handleBankruptcy(Player player) {
         System.out.println("******************************************");
@@ -145,14 +174,14 @@ public class GameController {
 
         System.out.println("🎉 CONGRATULATIONS TO " + player.getName() + " - You won by going broke! 🎉");
 
-        // ปล่อยทรัพย์สินคืนสู่กระดาน (รวมถึง Landmark)
+        // Return assets to board
         board.getSquares().stream()
                 .filter(s -> s instanceof Property)
                 .map(s -> (Property) s)
                 .filter(p -> p.getOwner() == player)
                 .forEach(p -> {
                     p.setOwner(null);
-                    p.setLandmark(false); // ลบสถานะ Landmark
+                    p.setLandmark(false);
                     System.out.println("Property " + p.getName() + " returned to board.");
                 });
 
@@ -163,14 +192,22 @@ public class GameController {
         }
     }
 
+    /**
+     * Decrements the skip turn counter for a player and notifies them.
+     *
+     * @param player The player skipping the turn.
+     */
     public void handleSkipTurn(Player player) {
         System.out.println(player.getName() + " must skip this turn due to Card Action. Turns left to skip: " + (player.getSkipTurns() - 1));
         player.setSkipTurns(player.getSkipTurns() - 1);
     }
 
     /**
-     * จัดการ Logic การอยู่ในคุก
-     * @return true ถ้าผู้เล่นจ่ายเงินและต้องเล่นเทิร์นปกติในรอบนี้
+     * Manages the turn logic when a player is in Jail.
+     * Offers the player a choice to pay to get out.
+     *
+     * @param player The player in jail.
+     * @return {@code true} if the player paid and should take a normal turn immediately; {@code false} otherwise.
      */
     public boolean handleJailTurn(Player player) {
         System.out.println(player.getName() + " is in Jail. Pay $50 to get out (y/n)?");
@@ -178,114 +215,107 @@ public class GameController {
 
         if (choice.equals("y")) {
             if (player.getMoney() >= 50 && player.deductMoney(50)) {
-
                 player.releaseFromJail();
                 System.out.println(player.getName() + " paid $50 to get out of Jail.");
-                return true; // แจ้งว่าผู้เล่นต้องเล่นเทิร์นปกติ
-
+                return true;
             } else {
                 System.out.println(player.getName() + " cannot afford to pay $50 and stays in Jail.");
             }
         } else {
             System.out.println(player.getName() + " stays in Jail for this turn.");
         }
-        return false; // แจ้งว่าผู้เล่นไม่ได้เล่นเทิร์นปกติ
+        return false;
     }
 
+    /**
+     * Executes a normal turn for a player: rolling dice, moving, and interacting with the landed square.
+     *
+     * @param player The current player.
+     */
     public void takeNormalTurn(Player player) {
         int totalRoll = dice.roll();
         System.out.println(player.getName() + " rolled (" + totalRoll + ")");
 
         player.move(totalRoll);
-
         handleLandedSquareAction(player);
     }
 
+    /**
+     * Identifies the type of square the player landed on and triggers the appropriate action.
+     * Supports Card squares, Property squares, Airplane squares, and standard squares.
+     *
+     * @param player The player who just moved.
+     */
     public void handleLandedSquareAction(Player player) {
         Square landedSquare = board.getSquare(player.getPosition());
         System.out.println("Landed on: " + landedSquare.getName() + " (Position: " + landedSquare.getPosition() + ")");
 
         if (landedSquare instanceof CardSquare) {
             Card drawnCard = cardManager.drawCard();
-
-            // บันทึกตำแหน่งเก่าไว้ก่อน หากการ์ดพาผู้เล่นย้ายตำแหน่ง
             int oldPosition = player.getPosition();
 
             drawnCard.execute(player, board);
 
-            // Logic Re-handle: ถ้าการ์ดทำให้ผู้เล่นย้ายตำแหน่ง
+            // Re-handle if the card moved the player to a new square
             if (player.getPosition() != oldPosition) {
                 System.out.println(">> Card action moved " + player.getName() + ". Re-handling action for the new square.");
-                // เรียก handleLandedSquareAction ซ้ำสำหรับตำแหน่งใหม่ (Recursive Call)
                 handleLandedSquareAction(player);
             }
 
         } else if (landedSquare instanceof Property) {
-            // จัดการ Property (ซื้อ/เช่า/อัพเกรด/Buyout)
             handlePropertySquare(player, (Property) landedSquare);
 
         } else if (landedSquare instanceof AirplaneSquare) {
-            // จัดการ Logic การเลือกปลายทางของเครื่องบิน
             handleAirplaneSquare(player);
 
         } else {
-            // *** Logic นี้จัดการช่องทั่วไป (Tax, Lottery, Jail, Go, Go to Jail) ***
             landedSquare.landOn(player);
         }
     }
 
     /**
-     * เมธอดสำหรับจัดการ Logic การซื้อ/เช่า/อัพเกรด/Buyout Property
+     * Handles interactions with a Property square (Rent, Buyout, Upgrade, Purchase).
+     *
+     * @param player   The player landing on the property.
+     * @param property The property square.
      */
     public void handlePropertySquare(Player player, Property property) {
         Player owner = property.getOwner();
 
-        // 1. Logic การจ่ายค่าเช่า (และยึดทรัพย์สิน/Buyout)
         if (owner != null && owner != player) {
+            // Pay Rent & Buyout Logic
             int rent = property.calculateRent(0);
             System.out.println(player.getName() + " must pay rent: $" + rent + " to " + owner.getName());
 
-            // 1.1 จ่ายค่าเช่า
             if (player.deductMoney(rent)) {
                 owner.addMoney(rent);
 
-                // 1.2 เสนอโอกาสในการซื้อทรัพย์สินต่อ (Buyout)
-
-                // *** เงื่อนไข: ห้ามเสนอ Buyout หากทรัพย์สินนั้นเป็น Landmark ***
                 if (property.isLandmark()) {
                     System.out.println(property.getName() + " is a Landmark and cannot be bought out.");
                     return;
                 }
 
-                int buyoutPrice = (int)( property.getPrice() * 1.5);
-
+                int buyoutPrice = (int)(property.getPrice() * 1.5);
                 if (player.getMoney() >= buyoutPrice) {
                     System.out.println("\n*** BUYOUT OPPORTUNITY ***");
                     System.out.println("Do you want to buy " + property.getName() + " from " + owner.getName() + " for $" + buyoutPrice + "? (y/n)");
 
                     String buyoutChoice = scanner.nextLine().toLowerCase();
-
                     if (buyoutChoice.equals("y")) {
                         if (player.deductMoney(buyoutPrice)) {
                             owner.addMoney(buyoutPrice);
-
-                            // โอนทรัพย์สิน
                             property.setOwner(player);
-                            // ลบสถานะ Landmark ของเจ้าของเดิมออก
                             property.setLandmark(false);
                             System.out.println("✅ " + player.getName() + " successfully bought out " + property.getName() + "!");
                         }
                     }
                 }
             } else {
-                // หากเงินไม่พอจ่ายค่าเช่า ถือว่าล้มละลายทันที
                 System.out.println(player.getName() + " cannot pay rent and goes BANKRUPT!");
-                player.addMoney(-player.getMoney()); // ตั้งเงินเป็น 0
+                player.addMoney(-player.getMoney());
             }
-        }
-
-        // 2. Logic การอัพเกรดเป็น Landmark (เมื่อเจ้าของมาตกช่องตัวเองซ้ำ)
-        else if (owner == player) {
+        } else if (owner == player) {
+            // Upgrade Logic
             if (!property.isLandmark()) {
                 if (player.getMoney() >= property.getUpgradeCost()) {
                     System.out.println("\n*** LANDMARK UPGRADE AVAILABLE ***");
@@ -306,10 +336,8 @@ public class GameController {
             } else {
                 System.out.println(property.getName() + " is already a Landmark.");
             }
-        }
-
-        // 3. Logic การซื้อทรัพย์สิน (สำหรับช่องที่ไม่มีเจ้าของ)
-        else if (owner == null) {
+        } else if (owner == null) {
+            // Buy Logic
             if (player.getMoney() >= property.getPrice()) {
                 System.out.println(player.getName() + " (Money: $" + player.getMoney() + ") do you want to buy " + property.getName() + " for $" + property.getPrice() + "? (y/n)");
                 String buyChoice = scanner.nextLine().toLowerCase();
@@ -326,7 +354,11 @@ public class GameController {
         }
     }
 
-
+    /**
+     * Handles the user interface logic for selecting a destination when landing on an Airplane square.
+     *
+     * @param player The player traveling by airplane.
+     */
     public void handleAirplaneSquare(Player player) {
         List<Square> squares = board.getSquares();
 
@@ -347,52 +379,35 @@ public class GameController {
             }
         }
 
-        handleAirplaneAction(player, targetPosition); // Call new centralized logic
-
-        // ลงบนช่องที่เลือก
+        handleAirplaneAction(player, targetPosition);
         handleLandedSquareAction(player);
     }
 
-    // *** NEW: Method for GUI to handle movement during Airplane Square (Fixes Error 10) ***
+    /**
+     * Executes the logic for moving a player via Airplane to a target position.
+     * Calculates the steps required (considering board wrap-around) and moves the player.
+     *
+     * @param player         The player moving.
+     * @param targetPosition The index of the destination square (0-19).
+     */
     public void handleAirplaneAction(Player player, int targetPosition) {
         System.out.println("GUI: Flying " + player.getName() + " to " + board.getSquare(targetPosition).getName() + "...");
 
         int currentPos = player.getPosition();
         int boardSize = board.getBoardSize();
 
-        // Calculate steps, ensuring it moves forward, wrapping around the board
         int steps = targetPosition - currentPos;
         if (steps <= 0) {
-            steps += boardSize; // Assumes board size is 20
+            steps += boardSize;
         }
 
-        // Use move() to ensure Go money is collected if passed.
         player.move(steps);
-        // The GUI (GameBoardScreen) is responsible for calling handleLandedSquareInteraction() after this returns.
     }
 
-
-    public List<Player> getPlayers() {
-        return players;
-    }
-
-    public Board getBoard() {
-        return board;
-    }
-
-    public Dice getDice() {
-        return dice;
-    }
-
-    public CardManager getCardManager() {
-        return cardManager;
-    }
-
-    public int getCurrentPlayerIndex() {
-        return currentPlayerIndex;
-    }
-
-    public Scanner getScanner() {
-        return scanner;
-    }
+    public List<Player> getPlayers() { return players; }
+    public Board getBoard() { return board; }
+    public Dice getDice() { return dice; }
+    public CardManager getCardManager() { return cardManager; }
+    public int getCurrentPlayerIndex() { return currentPlayerIndex; }
+    public Scanner getScanner() { return scanner; }
 }

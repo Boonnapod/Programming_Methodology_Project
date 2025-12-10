@@ -21,6 +21,13 @@ import javafx.stage.Stage;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Represents the screen where players choose their avatars.
+ * <p>
+ * This screen allows Player 1 and Player 2 to cycle through available character images
+ * before starting the main game.
+ * </p>
+ */
 public class CharacterSelectScreen {
 
     private final Stage primaryStage;
@@ -38,23 +45,33 @@ public class CharacterSelectScreen {
     private final ImageView player1ImageView = new ImageView();
     private final ImageView player2ImageView = new ImageView();
 
+    /**
+     * Constructs the CharacterSelectScreen.
+     *
+     * @param primaryStage   The main stage.
+     * @param gameController The game controller instance (passed from the menu).
+     */
     public CharacterSelectScreen(Stage primaryStage, GameController gameController) {
         this.primaryStage = primaryStage;
         this.gameController = gameController;
     }
 
+    /**
+     * Creates and returns the scene for character selection.
+     *
+     * @return The character selection {@link Scene}.
+     */
     public Scene createCharacterSelectScene() {
-        // เริ่มเล่น BGM
         SoundManager.playBGM("select.mp3");
 
         BorderPane root = new BorderPane();
         root.getStyleClass().add("root-background");
 
-        // โหลดรูปภาพเริ่มต้น
+        // Initialize images
         updateCharacterImage(player1ImageView, player1Index);
         updateCharacterImage(player2ImageView, player2Index);
 
-        // กล่องเลือกตัวละคร
+        // Selection Boxes
         VBox p1Box = createPlayerSelectionBox("Player 1", player1ImageView, true);
         VBox p2Box = createPlayerSelectionBox("Player 2", player2ImageView, false);
 
@@ -62,7 +79,7 @@ public class CharacterSelectScreen {
         centerBox.setAlignment(Pos.CENTER);
         root.setCenter(centerBox);
 
-        // Header ด้านบน
+        // Header
         Label headerLabel = new Label("CHOOSE YOUR CHARACTER");
         headerLabel.setFont(Font.font("Arial", FontWeight.BOLD, 40));
         headerLabel.setStyle("-fx-text-fill: white; -fx-effect: dropshadow(one-pass-box, black, 3, 0, 0, 2);");
@@ -72,9 +89,9 @@ public class CharacterSelectScreen {
         topBox.setPadding(new Insets(40, 0, 0, 0));
         root.setTop(topBox);
 
-        // --- ส่วนปุ่มควบคุมด้านล่าง (แก้ไขใหม่) ---
+        // --- Controls (Start / Back) ---
 
-        // 1. ปุ่ม Start Game
+        // 1. Start Game Button
         Button startButton = new Button("START GAME");
         startButton.getStyleClass().add("menu-button");
         startButton.setPrefWidth(200);
@@ -85,8 +102,7 @@ public class CharacterSelectScreen {
 
             List<Player> players = gameController.getPlayers();
 
-            // *** 🎯 เพิ่มโค้ดส่วนนี้เพื่อหยุดเพลงของ Select Screen ก่อนเปลี่ยนหน้าจอ 🎯 ***
-            // เมธอด SoundManager.stopBGM() ต้องมีอยู่ในคลาส SoundManager ของคุณ
+            // Stop BGM before switching to Game Board
             SoundManager.stopBGM();
 
             GameBoardScreen gameBoard = new GameBoardScreen(
@@ -99,27 +115,20 @@ public class CharacterSelectScreen {
             primaryStage.setScene(gameBoard.createGameScene());
         });
 
-        // 2. ปุ่ม Back to Menu (เพิ่มใหม่)
+        // 2. Back to Menu Button
         Button backButton = new Button("BACK TO MENU");
         backButton.getStyleClass().add("menu-button");
         backButton.setPrefWidth(200);
-        // ปรับสีปุ่ม Back ให้เป็นสีเทาๆ เพื่อให้ Start Game เด่นกว่า
         backButton.setStyle("-fx-background-color: #7f8c8d; -fx-text-fill: white;");
 
         backButton.setOnAction(e -> {
-            // หยุดเพลงก่อนกลับไปหน้าเมนูด้วย
             SoundManager.stopBGM();
-
-            // กลับไปหน้าเมนู
             GameMenu gameMenu = new GameMenu(primaryStage);
             primaryStage.setScene(gameMenu.createMenuScene());
         });
 
-        // 3. จัดวางลง VBox
-        VBox bottomBox = new VBox(20, startButton, backButton); // เพิ่มระยะห่างระหว่างปุ่มเป็น 20
+        VBox bottomBox = new VBox(20, startButton, backButton);
         bottomBox.setAlignment(Pos.CENTER);
-
-        // เพิ่ม Padding ด้านบน (ตัวเลขแรก) เป็น 60 เพื่อดันให้ห่างจากรูปตัวละคร
         bottomBox.setPadding(new Insets(60, 0, 40, 0));
 
         root.setBottom(bottomBox);

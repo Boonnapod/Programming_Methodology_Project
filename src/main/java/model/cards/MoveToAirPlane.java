@@ -3,16 +3,35 @@ package model.cards;
 import model.Board;
 import model.Player;
 
+/**
+ * A card that forces the player to move to the Airplane Square (Airport).
+ */
 public class MoveToAirPlane extends Card {
 
-    // ตำแหน่ง Airport จาก Board.java คือ index 15
+    // Target position for the Airport (index 15)
     private static final int AIRPLANE_POSITION = 15;
 
-    // ใช้ constructor ที่รับแค่ description ตาม GameController.zip/CardManager.java
+    /**
+     * Constructs a MoveToAirPlane card.
+     *
+     * @param description The text describing the action.
+     */
     public MoveToAirPlane(String description) {
         super(description);
     }
 
+    /**
+     * Teleports the player to the Airplane position.
+     * <p>
+     * Instead of setting the position directly, this method calculates the number of steps
+     * required to reach the target index moving forward. This ensures that if the player
+     * passes the "Go" square (index 0) during the travel, the game logic (in {@code Player.move()})
+     * will correctly trigger the "Pass Go" reward.
+     * </p>
+     *
+     * @param currentPlayer The player who drew the card.
+     * @param board         The game board.
+     */
     @Override
     public void execute(Player currentPlayer, Board board) {
 
@@ -20,25 +39,23 @@ public class MoveToAirPlane extends Card {
         System.out.println(">> " + currentPlayer.getName() + " is teleported to the Airport (Position " + AIRPLANE_POSITION + ")!");
 
         int currentPos = currentPlayer.getPosition();
-        // Board Size คือ 20 (ใช้ค่าคงที่จาก Player หรือกำหนดตรงนี้ถ้าไม่มี getter ใน Board)
+        // Assumes board size is 20
         int boardSize = 20;
 
-        // คำนวณจำนวนก้าวที่ต้องเดิน (เพื่อให้ผ่าน Go ได้หากจำเป็น)
+        // Calculate steps needed to reach AIRPLANE_POSITION moving forward
         int steps;
         if (currentPos <= AIRPLANE_POSITION) {
             steps = AIRPLANE_POSITION - currentPos;
         } else {
-            // เดินวนกระดาน
+            // Wrap around the board (e.g., from 18 to 15)
             steps = boardSize - currentPos + AIRPLANE_POSITION;
         }
 
-        // 1. เคลื่อนที่ผู้เล่นโดยใช้ move(steps) เพื่อจัดการเรื่องผ่าน Go
-        // **FIX 1: ใช้ move(steps) ครั้งเดียวแทนการวนลูป**
+        // Move the player using standard movement logic to handle "Pass Go" events
         currentPlayer.move(steps);
 
         System.out.println(">> " + currentPlayer.getName() + " is now at position " + currentPlayer.getPosition() + " (" + board.getSquare(currentPlayer.getPosition()).getName() + ").");
 
-        // *** FIX 2: ลบบรรทัดที่เรียก square.landOn(currentPlayer) ออก ***
-        // ปล่อยให้ GameController จัดการ Logic การทำงานของช่องใหม่ต่อ
+        // Note: The logic for the new square (AirplaneSquare) will be handled by the GameController
     }
 }

@@ -2,11 +2,25 @@ package model.squares;
 
 import model.Player;
 
+/**
+ * Represents an Island square, functioning similarly to a Property.
+ * <p>
+ * This class demonstrates how different types of properties can be implemented using the {@link Rentable} interface.
+ * </p>
+ */
 public class IslandSquare extends Square implements Rentable {
     private final int price;
     private final int rent;
     private Player owner = null;
 
+    /**
+     * Constructs an IslandSquare.
+     *
+     * @param name     The name of the island.
+     * @param position The position on the board.
+     * @param price    The purchase price.
+     * @param rent     The fixed rent cost.
+     */
     public IslandSquare(String name, int position, int price, int rent) {
         super(name, position);
         this.price = price;
@@ -15,7 +29,6 @@ public class IslandSquare extends Square implements Rentable {
 
     @Override
     public void landOn(Player player) {
-        // Logic การจ่ายเงิน/ซื้อจะถูกจัดการใน GameBoardScreen (เหมือน Property)
         if (owner != null && owner != player) {
             System.out.println("🏝️ " + player.getName() + " landed on " + getName() + " owned by " + owner.getName());
         } else if (owner == player) {
@@ -31,19 +44,8 @@ public class IslandSquare extends Square implements Rentable {
     }
 
     // --- Getters and Setters ---
-    public int getPrice() {
-        return price;
-    }
-
-    public int getRent() {
-        return rent;
-    }
-
-    public Player getOwner() {
-        return owner;
-    }
-
-    public void setOwner(Player owner) {
-        this.owner = owner;
-    }
+    public int getPrice() { return price; }
+    public int getRent() { return rent; }
+    public Player getOwner() { return owner; }
+    public void setOwner(Player owner) { this.owner = owner; }
 }

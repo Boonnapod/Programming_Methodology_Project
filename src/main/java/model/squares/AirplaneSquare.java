@@ -2,6 +2,13 @@ package model.squares;
 
 import model.Player;
 
+/**
+ * Represents an Airplane/Travel square.
+ * <p>
+ * This square allows players to "fly" to any other square on the board.
+ * The destination selection logic is handled by the {@code GameController}.
+ * </p>
+ */
 public class AirplaneSquare extends Square {
 
     public AirplaneSquare(String name, int position) {
@@ -10,7 +17,7 @@ public class AirplaneSquare extends Square {
 
     @Override
     public void landOn(Player player) {
-        // Logic การเลือกปลายทางจะถูกจัดการใน GameController
+        // Logic for choosing a destination is handled in GameController
         System.out.println(player.getName() + " landed on " + getName() + ". Choose your destination!");
     }
 }
