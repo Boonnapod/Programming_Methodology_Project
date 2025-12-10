@@ -1,42 +1,4 @@
 @startuml
-class model.squares.IslandSquare {
-- int price
-- int rent
-- Player owner
-+ void landOn(Player)
-+ int calculateRent(int)
-+ int getPrice()
-+ int getRent()
-+ Player getOwner()
-+ void setOwner(Player)
-}
-
-
-abstract class model.cards.Card {
-- String description
-+ String getDescription()
-+ {abstract}void execute(Player,Board)
-}
-
-
-class model.squares.CardSquare {
-+ void landOn(Player)
-}
-
-class model.squares.JailSquare {
-+ void landOn(Player)
-}
-
-class model.cards.SkipTurnCard {
-- int turnsToSkip
-+ void execute(Player,Board)
-}
-
-
-class model.squares.AirplaneSquare {
-+ void landOn(Player)
-}
-
 class model.cards.ReceiveMoneyCard {
 - int amount
 + void execute(Player,Board)
@@ -51,12 +13,51 @@ class model.squares.LotterySquare {
 }
 
 
-abstract class model.squares.Square {
-- String name
-- int position
-+ String getName()
-+ int getPosition()
-+ {abstract}void landOn(Player)
+class model.squares.AirplaneSquare {
++ void landOn(Player)
+}
+
+interface model.squares.Rentable {
+~ int calculateRent(int)
+}
+
+abstract class model.cards.Card {
+- String description
++ String getDescription()
++ {abstract}void execute(Player,Board)
+}
+
+
+class model.cards.MoveToAirPlane {
+- {static} int AIRPLANE_POSITION
++ void execute(Player,Board)
+}
+
+
+class model.squares.IslandSquare {
+- int price
+- int rent
+- Player owner
++ void landOn(Player)
++ int calculateRent(int)
++ int getPrice()
++ int getRent()
++ Player getOwner()
++ void setOwner(Player)
+}
+
+
+class model.cards.SkipTurnCard {
+- int turnsToSkip
++ void execute(Player,Board)
+}
+
+
+class model.squares.TaxSquare {
+- Random random
+- int lastTaxPaid
++ void landOn(Player)
++ int getLastTaxPaid()
 }
 
 
@@ -88,9 +89,22 @@ class model.Player {
 }
 
 
-class model.cards.MoveToAirPlane {
-- {static} int AIRPLANE_POSITION
-+ void execute(Player,Board)
+class model.Board {
+- List<Square> squares
+- {static} int BOARD_SIZE
+- void initializeBoard()
++ Square getSquare(int)
++ List<Square> getSquares()
++ int getBoardSize()
+}
+
+
+abstract class model.squares.Square {
+- String name
+- int position
++ String getName()
++ int getPosition()
++ {abstract}void landOn(Player)
 }
 
 
@@ -111,45 +125,31 @@ class model.squares.Property {
 }
 
 
+class model.squares.CardSquare {
++ void landOn(Player)
+}
+
 class model.squares.GoSquare {
 + void landOn(Player)
 }
 
-class model.squares.TaxSquare {
-- Random random
-- int lastTaxPaid
+class model.squares.JailSquare {
 + void landOn(Player)
-+ int getLastTaxPaid()
-}
-
-
-class model.Board {
-- List<Square> squares
-- {static} int BOARD_SIZE
-- void initializeBoard()
-+ Square getSquare(int)
-+ List<Square> getSquares()
-+ int getBoardSize()
-}
-
-
-interface model.squares.Rentable {
-~ int calculateRent(int)
 }
 
 
 
-model.squares.Rentable <|.. model.squares.IslandSquare
-model.squares.Square <|-- model.squares.IslandSquare
-model.squares.Square <|-- model.squares.CardSquare
-model.squares.Square <|-- model.squares.JailSquare
-model.cards.Card <|-- model.cards.SkipTurnCard
-model.squares.Square <|-- model.squares.AirplaneSquare
 model.cards.Card <|-- model.cards.ReceiveMoneyCard
 model.squares.Square <|-- model.squares.LotterySquare
+model.squares.Square <|-- model.squares.AirplaneSquare
 model.cards.Card <|-- model.cards.MoveToAirPlane
+model.squares.Rentable <|.. model.squares.IslandSquare
+model.squares.Square <|-- model.squares.IslandSquare
+model.cards.Card <|-- model.cards.SkipTurnCard
+model.squares.Square <|-- model.squares.TaxSquare
 model.squares.Rentable <|.. model.squares.Property
 model.squares.Square <|-- model.squares.Property
+model.squares.Square <|-- model.squares.CardSquare
 model.squares.Square <|-- model.squares.GoSquare
-model.squares.Square <|-- model.squares.TaxSquare
+model.squares.Square <|-- model.squares.JailSquare
 @enduml
