@@ -956,6 +956,18 @@ public class GameBoardScreen {
         }
     }
 
+    /**
+     * Retrieves the specific {@link StackPane} (grid cell) located at the given row and column indices.
+     * <p>
+     * This helper method iterates through the children of the {@code boardGrid} to find the node
+     * that matches the specified grid coordinates. It is essential for targeting specific
+     * [cite_start]squares to update their visuals (e.g., moving tokens or changing ownership colors)[cite: 127].
+     * </p>
+     *
+     * @param row    The row index in the GridPane.
+     * @param intcol The column index in the GridPane.
+     * @return The {@link StackPane} at the specified coordinates, or {@code null} if not found.
+     */
     private StackPane getCellFromGrid(int row, int intcol) {
         for (javafx.scene.Node node : boardGrid.getChildren()) {
             Integer nodeCol = GridPane.getColumnIndex(node);
@@ -969,6 +981,23 @@ public class GameBoardScreen {
         return null;
     }
 
+    /**
+     * Constructs the visual container for a single board square.
+     * <p>
+     * This method builds the UI for a square by:
+     * <ol>
+     * <li>Creating a label for the square's index.</li>
+     * [cite_start]<li>Generating the appropriate icon using {@code createSquareIcon}. [cite: 127]</li>
+     * <li>Creating a label for the square's name.</li>
+     * [cite_start]<li>Arranging these elements vertically in a {@link VBox}. [cite: 127]</li>
+     * [cite_start]<li>Applying the initial styling via {@code updateSquareBoxStyle}. [cite: 127]</li>
+     * </ol>
+     * </p>
+     *
+     * @param square The data model representing the square.
+     * @param index  The logical index (0-19) of the square on the board.
+     * @return A {@link VBox} containing the visual elements of the square.
+     */
     private VBox createSquareBox(Square square, int index) {
         Label indexLabel = new Label("#" + index);
         indexLabel.setFont(Font.font("Arial", FontWeight.BOLD, 10));
@@ -1003,6 +1032,20 @@ public class GameBoardScreen {
         return box;
     }
 
+    /**
+     * Applies CSS styling to the square's container based on its type and state.
+     * <p>
+     * This method handles the dynamic coloring of the board:
+     * <ul>
+     * [cite_start]<li><b>Special Squares:</b> Assigns specific background colors (e.g., Blue for Jail, Pink for Cards, Green for Go). [cite: 127]</li>
+     * [cite_start]<li><b>Properties:</b> Checks ownership to apply player-specific background and border colors (Green for Player 1, Red for Player 2). [cite: 127]</li>
+     * [cite_start]<li><b>Landmarks:</b> Applies a thick Gold border if the property has been upgraded. [cite: 127]</li>
+     * </ul>
+     * </p>
+     *
+     * @param box    The visual container (VBox) to style.
+     * @param square The data model containing the square's type and ownership status.
+     */
     private void updateSquareBoxStyle(VBox box, Square square) {
         String backgroundColor = "#FFFFFF";
         String borderColor = "#000000";
@@ -1057,6 +1100,20 @@ public class GameBoardScreen {
         box.setStyle("-fx-background-color: " + backgroundColor + ";");
     }
 
+    /**
+     * Refreshes the visual representation of a specific square during gameplay.
+     * <p>
+     * This method is called after game events (like purchasing a property or upgrading to a Landmark)
+     * to ensure the UI reflects the current state. It:
+     * <ol>
+     * [cite_start]<li>Locates the specific cell in the grid layout. [cite: 127]</li>
+     * [cite_start]<li>Clears the existing content and regenerates the icon and labels (e.g., switching from a House icon to a Landmark icon). [cite: 127]</li>
+     * [cite_start]<li>Re-applies the styling via {@code updateSquareBoxStyle} to update colors and borders. [cite: 127]</li>
+     * </ol>
+     * </p>
+     *
+     * @param square The data model of the square to update.
+     */
     private void updateSquareBox(Square square) {
         int row = getRowForPosition(square.getPosition());
         int col = getColForPosition(square.getPosition());
@@ -1088,6 +1145,22 @@ public class GameBoardScreen {
         }
     }
 
+    /**
+     * Constructs the visual grid layout for the game board.
+     * <p>
+     * This method initializes a 6x6 {@link GridPane} and populates it with square cells.
+     * It iterates through every row and column, using {@link #getIndexFromGrid(int, int, int)}
+     * to map the 2D grid coordinates to the logical 1D index (0-19) of the board squares.
+     * <ul>
+     * <li>If the coordinates correspond to a valid board square (the edges), it creates and adds
+     * a visual {@link VBox} for that square.</li>
+     * <li>If the coordinates correspond to the center (the empty area), it creates an empty,
+     * transparent cell to maintain the loop layout structure.</li>
+     * </ul>
+     * </p>
+     *
+     * @return The fully constructed {@link GridPane} representing the game board.
+     */
     private GridPane createBoardGrid() {
         GridPane grid = new GridPane();
         grid.setAlignment(Pos.CENTER);
@@ -1141,6 +1214,17 @@ public class GameBoardScreen {
         return -1;
     }
 
+    /**
+     * Helper method to create an {@link ImageView} for a player's character.
+     * <p>
+     * This method loads the character image from the resources based on the provided index.
+     * If the image file cannot be found, it prints an error to the standard error stream
+     * but returns an empty ImageView with a set width to prevent layout collapse.
+     * </p>
+     *
+     * @param index The index of the character in the {@code CHARACTER_FILES} array.
+     * [cite_start]@return An {@link ImageView} containing the character's avatar, or an empty view if loading fails[cite: 127].
+     */
     private ImageView createCharacterImageView(int index) {
         ImageView imageView = new ImageView();
         try {
@@ -1157,6 +1241,19 @@ public class GameBoardScreen {
         return imageView;
     }
 
+    /**
+     * Constructs the visual information panel for a player.
+     * <p>
+     * This method creates a horizontal box containing the player's character image, name, and money.
+     * It also performs the crucial side effect of assigning the generated money label to the
+     * class-level field ({@code player1MoneyLabel} or {@code player2MoneyLabel}) to enable future updates.
+     * </p>
+     *
+     * @param player     The player object containing the data to display.
+     * @param charIndex  The index of the character avatar selected by the player.
+     * @param isPlayer1  A boolean flag to determine styling (Green for Player 1, Red for Player 2).
+     * [cite_start]@return An {@link HBox} containing the styled player panel[cite: 127].
+     */
     private HBox createPlayerPanel(Player player, int charIndex, boolean isPlayer1) {
         ImageView charImageView = createCharacterImageView(charIndex);
         charImageView.setFitWidth(50);
@@ -1191,6 +1288,15 @@ public class GameBoardScreen {
         return panel;
     }
 
+    /**
+     * Updates the displayed money balance for a specific player.
+     * <p>
+     * This method checks the player's current actual money against the value currently displayed
+     * on the UI label. If they differ, it plays a sound effect ("lottery.mp3") and updates the text.
+     * </p>
+     *
+     * [cite_start]@param player The player whose money display needs refreshing[cite: 127].
+     */
     public void updatePlayerMoney(Player player) {
         Label targetLabel = null;
         if (player == players.get(0)) {
@@ -1210,6 +1316,20 @@ public class GameBoardScreen {
         }
     }
 
+    /**
+     * Generates the appropriate visual icon for a board square based on its type and state.
+     * <p>
+     * The method determines the correct image file to load by checking the instance type of the square:
+     * <ul>
+     * <li><b>Property:</b> Returns a "landmark" icon if upgraded, a "house" icon if owned, or null otherwise.</li>
+     * <li><b>Island:</b> Returns an "island" icon if owned.</li>
+     * <li><b>Others:</b> Returns specific icons for Lottery, Tax, Jail, Airplane, and Card squares.</li>
+     * </ul>
+     * </p>
+     *
+     * @param square The square model to generate an icon for.
+     * [cite_start]@return An {@link ImageView} containing the icon, or {@code null} if no icon is required[cite: 127].
+     */
     private ImageView createSquareIcon(Square square) {
         String fileName = null;
 
@@ -1252,6 +1372,13 @@ public class GameBoardScreen {
         return null;
     }
 
+    /**
+     * helper method to play the dice rolling sound effect.
+     * <p>
+     * Loads the "dice.mp3" file from the sound effects resource directory and plays it
+     * using an {@link AudioClip}. [cite_start]Logs an error if the file cannot be found[cite: 127].
+     * </p>
+     */
     private void playDiceSound() {
         try {
             URL soundResource = getClass().getResource("/soundfx/dice.mp3");
@@ -1267,6 +1394,16 @@ public class GameBoardScreen {
         }
     }
 
+    /**
+     * A helper method that plays a specific sound effect.
+     * <p>
+     * It constructs the resource URL by appending the provided filename to the
+     * {@code /soundfx/} directory path. If the file exists, it plays the audio
+     * clip at full volume. Errors during loading or playback are logged to the standard error stream.
+     * </p>
+     *
+     * [cite_start]@param fileName The name of the audio file (including extension) to play[cite: 127].
+     */
     private void playSound(String fileName) {
         try {
             URL soundResource = getClass().getResource("/soundfx/" + fileName);
@@ -1282,6 +1419,21 @@ public class GameBoardScreen {
         }
     }
 
+    /**
+     * Determines and plays the appropriate sound effect based on the specific type of square the player landed on.
+     * <p>
+     * This method checks the instance type of the provided {@link Square} object to select the corresponding audio file:
+     * <ul>
+     * <li><b>CardSquare:</b> Plays "card.mp3".</li>
+     * <li><b>JailSquare:</b> Plays "jail.mp3".</li>
+     * <li><b>LotterySquare / TaxSquare:</b> Plays "lottery.mp3".</li>
+     * <li><b>AirplaneSquare:</b> Plays "plane.mp3".</li>
+     * </ul>
+     * If a mapping is found, the sound is loaded from the {@code /soundfx/} resource directory and played immediately using an {@link AudioClip}.
+     * </p>
+     *
+     * @param square The square object the player has landed on, used to determine the correct sound effect.
+     */
     private void playSquareSound(Square square) {
         String soundFile = null;
 
@@ -1320,6 +1472,20 @@ public class GameBoardScreen {
         }
     }
 
+    /**
+     * A debug/cheat method used to force a specific dice roll result.
+     * <p>
+     * This method is typically triggered by keyboard shortcuts (1-6) to test specific
+     * movement scenarios without relying on random probability. It:
+     * <ol>
+     * <li>Validates that the roll button is currently active.</li>
+     * <li>Sets a "forced result" on the {@code Dice} object.</li>
+     * <li>Triggers the standard {@code executeRollAndMove} flow using the forced number.</li>
+     * </ol>
+     * </p>
+     *
+     * @param steps The specific number of steps the player should move (1-6).
+     */
     private void handleTestMove(int steps) {
         Button rollButton = (Button) primaryStage.getScene().lookup("#roll-button");
         if (rollButton == null || rollButton.isDisable()) {
@@ -1333,6 +1499,27 @@ public class GameBoardScreen {
 
         System.out.println("TEST MOVE: " + activePlayer.getName() + " forces roll to " + steps + " steps");
     }
+
+    /**
+     * A centralized handler for any square that implements the {@link Rentable} interface.
+     * <p>
+     * This method acts as a dispatcher based on the ownership status of the square (Property or Island):
+     * <ul>
+     * <li><b>Owned by Opponent:</b> Delegates to {@link #handleRentPayment} to enforce rent collection.</li>
+     * <li><b>Owned by Current Player:</b>
+     * <ul>
+     * <li>If it is a {@code Property} and not a Landmark, offers an Upgrade dialog.</li>
+     * <li>If it is an {@code IslandSquare}, simply welcomes the player back (Islands cannot be upgraded).</li>
+     * </ul>
+     * </li>
+     * <li><b>Unowned:</b> Delegates to the appropriate "Buy" dialog based on the square type.</li>
+     * </ul>
+     * </p>
+     *
+     * @param player     The player landing on the square.
+     * @param square     The square object (must implement {@link Rentable}).
+     * @param rollButton The roll button, passed along to subsequent methods to handle turn phases.
+     */
     private void handleRentableAction(Player player, Square square, Button rollButton) {
         // Cast to Rentable (both Property and IslandSquare implement this)
         Rentable rentable = (Rentable) square;
@@ -1374,6 +1561,26 @@ public class GameBoardScreen {
         }
     }
 
+    /**
+     * Processes the mandatory rent payment and optional buyout logic when a player lands on an opponent's property.
+     * <p>
+     * Logic Flow:
+     * <ol>
+     * <li>Calculates rent and displays a mandatory payment warning.</li>
+     * <li>Deducts money from the player and transfers it to the owner. (Handles partial payment if bankrupt).</li>
+     * <li><b>Buyout Check:</b> If the square is a standard {@code Property} (not an Island/Landmark) and the player
+     * has enough funds (1.5x price), displays a "Buyout" opportunity dialog.</li>
+     * <li>If a Buyout occurs, ownership is transferred immediately.</li>
+     * <li>Ends the turn.</li>
+     * </ol>
+     * </p>
+     *
+     * @param player     The player paying rent.
+     * @param square     The square being visited.
+     * @param rentable   The interface used to calculate rent cost.
+     * @param owner      The current owner of the square.
+     * @param rollButton The roll button, used to finalize the turn.
+     */
     private void handleRentPayment(Player player, Square square, Rentable rentable, Player owner, Button rollButton) {
 
         int rent = rentable.calculateRent(0);
