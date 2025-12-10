@@ -1,0 +1,108 @@
+@startuml
+class ui.SoundManager {
+- {static} MediaPlayer currentBGM
++ {static} void playBGM(String)
++ {static} void stopBGM()
+}
+
+
+class ui.Main {
++ {static} int WIDTH
++ {static} int HEIGHT
++ void start(Stage)
++ {static} void main(String[])
+}
+
+
+class ui.GameBoardScreen {
+- Stage primaryStage
+- GameController gameController
+- Board board
+- List<Player> players
+- List<Integer> selectedCharIndices
+- Label player1MoneyLabel
+- Label player2MoneyLabel
+- Label playerTurnLabel
+- AudioClip winSound
+- List<ImageView> playerTokens
+- GridPane boardGrid
+- {static} String[] CHARACTER_FILES
+- {static} String RESOURCE_PATH
+- {static} int MOVEMENT_DELAY_MS
+- {static} String ICON_PATH
+- {static} int WIDTH
+- {static} int HEIGHT
+- void initializePlayerTokens()
++ Scene createGameScene()
+- void startTurnAndAnimate(Button)
+- void handleJailTurn(Player,Button)
+- void processWaitInJail(Player,Button)
+- void executeRollAndMove(Player,Button)
+- void showSkipTurnDialog(Player,Button)
+- void animateMovement(Player,int,Button)
+- void handleLandedSquareInteraction(Player,Button)
+- void handlePropertyAction(Player,Property,Button)
+- void handleCardAction(Player,Button)
+- void handleAirplaneAction(Player,Button)
+- void handleGeneralSquareAction(Player,Square,Button)
+- void handleIslandAction(Player,IslandSquare,Button)
+- void endTurn(Player,Button)
+- void showBuyPropertyDialog(Player,Property,Button)
+- void showBuyIslandDialog(Player,IslandSquare,Button)
+- void showUpgradePropertyDialog(Player,Property,Button)
+- void refreshAllPlayersMoney()
+- void checkBankruptcy(Player)
+- void showGameOverScreen(Player)
+- void showSimpleAlert(String,String)
+- void styleDialog(Dialog<?>)
+- void updateTurnDisplay(Button)
+- String toHexString(Color)
++ void updatePlayerTokens()
+- StackPane getCellFromGrid(int,int)
+- VBox createSquareBox(Square,int)
+- void updateSquareBoxStyle(VBox,Square)
+- void updateSquareBox(Square)
+- GridPane createBoardGrid()
+- int getIndexFromGrid(int,int,int)
+- int getRowForPosition(int)
+- int getColForPosition(int)
+- ImageView createCharacterImageView(int)
+- HBox createPlayerPanel(Player,int,boolean)
++ void updatePlayerMoney(Player)
+- ImageView createSquareIcon(Square)
+- void playDiceSound()
+- void playSound(String)
+- void playSquareSound(Square)
+- int getMoneyFromLabel(Label)
+- void handleTestMove(int)
+}
+
+
+class ui.GameMenu {
+- Stage primaryStage
+- {static} String COVER_IMAGE_PATH
++ Scene createMenuScene()
+}
+
+
+class ui.CharacterSelectScreen {
+- Stage primaryStage
+- GameController gameController
+- {static} String[] CHARACTER_FILES
+- {static} String RESOURCE_PATH
+- {static} int MAX_CHARACTERS
+- int player1Index
+- int player2Index
+- ImageView player1ImageView
+- ImageView player2ImageView
++ Scene createCharacterSelectScene()
+- VBox createPlayerSelectionBox(String,ImageView,boolean)
+- void changeCharacter(boolean,int)
+- void updateCharacterImage(ImageView,int)
+}
+
+
+
+
+javafx.application.Application <|-- ui.Main
+@enduml

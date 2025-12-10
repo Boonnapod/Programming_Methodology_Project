@@ -1,0 +1,155 @@
+@startuml
+class model.squares.IslandSquare {
+- int price
+- int rent
+- Player owner
++ void landOn(Player)
++ int calculateRent(int)
++ int getPrice()
++ int getRent()
++ Player getOwner()
++ void setOwner(Player)
+}
+
+
+abstract class model.cards.Card {
+- String description
++ String getDescription()
++ {abstract}void execute(Player,Board)
+}
+
+
+class model.squares.CardSquare {
++ void landOn(Player)
+}
+
+class model.squares.JailSquare {
++ void landOn(Player)
+}
+
+class model.cards.SkipTurnCard {
+- int turnsToSkip
++ void execute(Player,Board)
+}
+
+
+class model.squares.AirplaneSquare {
++ void landOn(Player)
+}
+
+class model.cards.ReceiveMoneyCard {
+- int amount
++ void execute(Player,Board)
+}
+
+
+class model.squares.LotterySquare {
+- Random random
+- int lastPrize
++ void landOn(Player)
++ int getLastPrize()
+}
+
+
+abstract class model.squares.Square {
+- String name
+- int position
++ String getName()
++ int getPosition()
++ {abstract}void landOn(Player)
+}
+
+
+class model.Player {
+- String name
+- int money
+- int position
+- boolean inJail
+- int skipTurns
+- int jailTurns
+- {static} int SMALL_BOARD_SIZE
+- {static} int INITIAL_MONEY_DEFAULT
++ String getName()
++ int getMoney()
++ int getPosition()
++ boolean isInJail()
++ int getSkipTurns()
++ {static} int getInitialMoney()
++ int getJailTurns()
++ void setSkipTurns(int)
++ void addMoney(int)
++ boolean deductMoney(int)
++ void goToJail()
++ void releaseFromJail()
++ void decrementJailTurns()
++ void move(int)
++ void warp(int)
++ void setPosition(int)
+}
+
+
+class model.cards.MoveToAirPlane {
+- {static} int AIRPLANE_POSITION
++ void execute(Player,Board)
+}
+
+
+class model.squares.Property {
+- int price
+- int baseRent
+- int upgradeCost
+- Player owner
+- boolean isLandmark
++ void landOn(Player)
++ int calculateRent(int)
++ int getPrice()
++ int getUpgradeCost()
++ Player getOwner()
++ boolean isLandmark()
++ void setOwner(Player)
++ void setLandmark(boolean)
+}
+
+
+class model.squares.GoSquare {
++ void landOn(Player)
+}
+
+class model.squares.TaxSquare {
+- Random random
+- int lastTaxPaid
++ void landOn(Player)
++ int getLastTaxPaid()
+}
+
+
+class model.Board {
+- List<Square> squares
+- {static} int BOARD_SIZE
+- void initializeBoard()
++ Square getSquare(int)
++ List<Square> getSquares()
++ int getBoardSize()
+}
+
+
+interface model.squares.Rentable {
+~ int calculateRent(int)
+}
+
+
+
+model.squares.Rentable <|.. model.squares.IslandSquare
+model.squares.Square <|-- model.squares.IslandSquare
+model.squares.Square <|-- model.squares.CardSquare
+model.squares.Square <|-- model.squares.JailSquare
+model.cards.Card <|-- model.cards.SkipTurnCard
+model.squares.Square <|-- model.squares.AirplaneSquare
+model.cards.Card <|-- model.cards.ReceiveMoneyCard
+model.squares.Square <|-- model.squares.LotterySquare
+model.cards.Card <|-- model.cards.MoveToAirPlane
+model.squares.Rentable <|.. model.squares.Property
+model.squares.Square <|-- model.squares.Property
+model.squares.Square <|-- model.squares.GoSquare
+model.squares.Square <|-- model.squares.TaxSquare
+@enduml

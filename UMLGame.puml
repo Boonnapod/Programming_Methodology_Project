@@ -1,0 +1,47 @@
+@startuml
+class game.Dice {
+- Random random
+- int forcedResult
++ void setForcedResult(int)
++ int roll()
+}
+
+
+class game.CardManager {
+- List<Card> deck
+- void initializeDeck(List<Player>)
++ Card drawCard()
+}
+
+
+class game.GameController {
+- Board board
+- Dice dice
+- List<Player> players
+- CardManager cardManager
+- int currentPlayerIndex
+- Scanner scanner
++ void setupGame()
++ void startGameLoop()
++ Player getNextPlayer()
++ Player getCurrentPlayer()
++ void moveToNextPlayer()
++ void handleBankruptcy(Player)
++ void handleSkipTurn(Player)
++ boolean handleJailTurn(Player)
++ void takeNormalTurn(Player)
++ void handleLandedSquareAction(Player)
++ void handleRentableSquare(Player,Square)
++ void handlePropertySquare(Player,Property)
++ void handleAirplaneSquare(Player)
++ void handleAirplaneAction(Player,int)
++ List<Player> getPlayers()
++ Board getBoard()
++ Dice getDice()
++ CardManager getCardManager()
++ int getCurrentPlayerIndex()
++ Scanner getScanner()
+}
+
+
+@enduml
