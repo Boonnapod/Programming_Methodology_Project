@@ -146,7 +146,7 @@ public class GameBoardScreen {
         rollButton.setOnAction(e -> {
             rollButton.setDisable(true);
             startTurnAndAnimate(rollButton);
-            playDiceSound();
+            //playDiceSound();
         });
 
         // Player Turn Label
