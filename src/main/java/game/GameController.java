@@ -275,7 +275,6 @@ public class GameController {
             handleAirplaneSquare(player);
 
         } else if (landedSquare instanceof Rentable) {
-            // *** NEW: Check for generic Rentable squares (like IslandSquare) ***
             handleRentableSquare(player, (Square) landedSquare);
 
         } else {
@@ -284,7 +283,7 @@ public class GameController {
     }
 
     /**
-     * [NEW METHOD] Handles generic Rentable squares (e.g. IslandSquare).
+     * Handles generic Rentable squares (e.g. IslandSquare).
      * Since Rentable interface only has calculateRent(), we might need to cast
      * to specific types to handle ownership/buying if the interface doesn't support it.
      */
@@ -299,8 +298,6 @@ public class GameController {
 
         System.out.println("[Rentable Check] This square charges rent!");
 
-        // เรียกใช้ landOn ตามปกติเพื่อให้ Square จัดการ Logic ของตัวเอง (เช่น การจ่ายค่าเช่า/การซื้อ)
-        // ซึ่งภายใน class นั้น (เช่น IslandSquare) ควรจะมีการเรียกใช้ calculateRent() ของตัวเอง
         square.landOn(player);
     }
 
