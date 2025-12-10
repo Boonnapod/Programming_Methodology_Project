@@ -433,16 +433,12 @@ public class GameBoardScreen {
         Square landedSquare = board.getSquare(player.getPosition());
         System.out.println(">>> Handling interaction at: " + landedSquare.getName() + " [" + player.getPosition() + "]");
 
-        // 1. Model Logic (if any specific logic exists in the square class)
         landedSquare.landOn(player);
-
         refreshAllPlayersMoney();
 
-        // 2. UI Logic Dispatch
-        if (landedSquare instanceof Property) {
-            handlePropertyAction(player, (Property) landedSquare, rollButton);
-        } else if (landedSquare instanceof IslandSquare) {
-            handleIslandAction(player, (IslandSquare) landedSquare, rollButton);
+
+        if (landedSquare instanceof Rentable) {
+            handleRentableAction(player, landedSquare, rollButton);
         } else if (landedSquare instanceof CardSquare) {
             handleCardAction(player, rollButton);
         } else if (landedSquare instanceof AirplaneSquare) {
@@ -452,69 +448,6 @@ public class GameBoardScreen {
         }
     }
 
-    private void handlePropertyAction(Player player, Property property, Button rollButton) {
-        if (property.getOwner() != null && property.getOwner() != player) {
-            // Case: Pay Rent (Mandatory)
-            int rent = property.calculateRent(0);
-
-            Alert rentAlert = new Alert(Alert.AlertType.WARNING);
-            rentAlert.setTitle("Mandatory Rent Payment");
-            rentAlert.setHeaderText("PAY RENT! $" + rent);
-            rentAlert.setContentText(player.getName() + " landed on " + property.getOwner().getName() + "'s property (" + property.getName() + "). Payment is mandatory.");
-            rentAlert.getButtonTypes().setAll(ButtonType.OK);
-
-            styleDialog(rentAlert);
-            rentAlert.showAndWait();
-
-            if (player.deductMoney(rent)) {
-                property.getOwner().addMoney(rent);
-            } else {
-                // Bankruptcy Logic: Transfer all remaining money
-                int moneyToPay = player.getMoney();
-                property.getOwner().addMoney(moneyToPay);
-                player.addMoney(-moneyToPay);
-            }
-            refreshAllPlayersMoney();
-
-            // Case: Buyout Opportunity
-            if (player.getMoney() > 0 && !property.isLandmark()) {
-                int buyoutPrice = (int)( property.getPrice() * 1.5);
-                if (player.getMoney() >= buyoutPrice) {
-                    Alert buyoutAlert = new Alert(Alert.AlertType.CONFIRMATION);
-                    buyoutAlert.setTitle("Buyout Opportunity");
-                    buyoutAlert.setHeaderText("Buyout " + property.getName() + "?");
-                    buyoutAlert.setContentText("Price: $" + buyoutPrice + ". Do you want to buy it?");
-
-                    styleDialog(buyoutAlert);
-
-                    Optional<ButtonType> buyoutResult = buyoutAlert.showAndWait();
-                    if (buyoutResult.isPresent() && buyoutResult.get() == ButtonType.OK) {
-                        if (player.deductMoney(buyoutPrice)) {
-                            property.getOwner().addMoney(buyoutPrice);
-                            property.setOwner(player);
-                            property.setLandmark(false);
-                            updateSquareBox(property);
-                            refreshAllPlayersMoney();
-                            System.out.println("✅ " + player.getName() + " bought out " + property.getName());
-                        }
-                    }
-                }
-            }
-            endTurn(player, rollButton);
-
-        } else if (property.getOwner() == player) {
-            // Case: Upgrade to Landmark
-            if (!property.isLandmark()) {
-                showUpgradePropertyDialog(player, property, rollButton);
-            } else {
-                endTurn(player, rollButton);
-            }
-
-        } else {
-            // Case: Buy New Property
-            showBuyPropertyDialog(player, property, rollButton);
-        }
-    }
 
     private void handleCardAction(Player player, Button rollButton) {
         int oldPosition = player.getPosition();
@@ -590,39 +523,6 @@ public class GameBoardScreen {
         }
 
         endTurn(player, rollButton);
-    }
-
-    private void handleIslandAction(Player player, IslandSquare island, Button rollButton) {
-        if (island.getOwner() != null && island.getOwner() != player) {
-            // Pay Rent
-            int rent = island.calculateRent(0);
-
-            Alert rentAlert = new Alert(Alert.AlertType.WARNING);
-            rentAlert.setTitle("Island Rent");
-            rentAlert.setHeaderText("🏝️ PAY ISLAND RENT! $" + rent);
-            rentAlert.setContentText(player.getName() + " landed on " + island.getOwner().getName() + "'s island (" + island.getName() + ").");
-            rentAlert.getButtonTypes().setAll(ButtonType.OK);
-            styleDialog(rentAlert);
-            rentAlert.showAndWait();
-
-            if (player.deductMoney(rent)) {
-                island.getOwner().addMoney(rent);
-            } else {
-                int moneyToPay = player.getMoney();
-                island.getOwner().addMoney(moneyToPay);
-                player.addMoney(-moneyToPay);
-            }
-            refreshAllPlayersMoney();
-            endTurn(player, rollButton);
-
-        } else if (island.getOwner() == player) {
-            showSimpleAlert("Your Island", "Welcome back to your island: " + island.getName() + "!");
-            endTurn(player, rollButton);
-
-        } else {
-            // Buy Island
-            showBuyIslandDialog(player, island, rollButton);
-        }
     }
 
     // =========================================================================
@@ -1254,5 +1154,100 @@ public class GameBoardScreen {
         executeRollAndMove(activePlayer, rollButton);
 
         System.out.println("TEST MOVE: " + activePlayer.getName() + " forces roll to " + steps + " steps");
+    }
+    private void handleRentableAction(Player player, Square square, Button rollButton) {
+        // Cast to Rentable (both Property and IslandSquare implement this)
+        Rentable rentable = (Rentable) square;
+        Player owner = null;
+
+        // Get owner based on type
+        if (square instanceof Property) {
+            owner = ((Property) square).getOwner();
+        } else if (square instanceof IslandSquare) {
+            owner = ((IslandSquare) square).getOwner();
+        }
+
+        // Case 1: Someone else owns it - Pay Rent
+        if (owner != null && owner != player) {
+            handleRentPayment(player, square, rentable, owner, rollButton);
+
+            // Case 2: Player owns it - Upgrade (Property only)
+        } else if (owner == player) {
+            if (square instanceof Property) {
+                Property property = (Property) square;
+                if (!property.isLandmark()) {
+                    showUpgradePropertyDialog(player, property, rollButton);
+                } else {
+                    endTurn(player, rollButton);
+                }
+            } else if (square instanceof IslandSquare) {
+                // Island: Just visiting, no upgrades
+                showSimpleAlert("Your Island", "Welcome back to your island: " + square.getName() + "!");
+                endTurn(player, rollButton);
+            }
+
+            // Case 3: Unowned - Buy
+        } else {
+            if (square instanceof Property) {
+                showBuyPropertyDialog(player, (Property) square, rollButton);
+            } else if (square instanceof IslandSquare) {
+                showBuyIslandDialog(player, (IslandSquare) square, rollButton);
+            }
+        }
+    }
+
+    private void handleRentPayment(Player player, Square square, Rentable rentable, Player owner, Button rollButton) {
+
+        int rent = rentable.calculateRent(0);
+
+        String squareType = (square instanceof IslandSquare) ? "🏝️ Island" : "Property";
+
+        Alert rentAlert = new Alert(Alert.AlertType.WARNING);
+        rentAlert.setTitle("Mandatory Rent Payment");
+        rentAlert.setHeaderText("PAY RENT! $" + rent);
+        rentAlert.setContentText(player.getName() + " landed on " + owner.getName() + "'s " + squareType.toLowerCase() + " (" + square.getName() + "). Payment is mandatory.");
+        rentAlert.getButtonTypes().setAll(ButtonType.OK);
+        styleDialog(rentAlert);
+        rentAlert.showAndWait();
+
+        // Pay rent
+        if (player.deductMoney(rent)) {
+            owner.addMoney(rent);
+        } else {
+            // Bankruptcy: pay what you can
+            int moneyToPay = player.getMoney();
+            owner.addMoney(moneyToPay);
+            player.addMoney(-moneyToPay);
+        }
+        refreshAllPlayersMoney();
+
+        // Buyout Opportunity (Property only, not Landmark, not Island)
+        if (square instanceof Property && player.getMoney() > 0) {
+            Property property = (Property) square;
+            if (!property.isLandmark()) {
+                int buyoutPrice = (int)(property.getPrice() * 1.5);
+                if (player.getMoney() >= buyoutPrice) {
+                    Alert buyoutAlert = new Alert(Alert.AlertType.CONFIRMATION);
+                    buyoutAlert.setTitle("Buyout Opportunity");
+                    buyoutAlert.setHeaderText("Buyout " + property.getName() + "?");
+                    buyoutAlert.setContentText("Price: $" + buyoutPrice + ". Do you want to buy it?");
+                    styleDialog(buyoutAlert);
+
+                    Optional<ButtonType> buyoutResult = buyoutAlert.showAndWait();
+                    if (buyoutResult.isPresent() && buyoutResult.get() == ButtonType.OK) {
+                        if (player.deductMoney(buyoutPrice)) {
+                            property.getOwner().addMoney(buyoutPrice);
+                            property.setOwner(player);
+                            property.setLandmark(false);
+                            updateSquareBox(property);
+                            refreshAllPlayersMoney();
+                            System.out.println("✅ " + player.getName() + " bought out " + property.getName());
+                        }
+                    }
+                }
+            }
+        }
+
+        endTurn(player, rollButton);
     }
 }
