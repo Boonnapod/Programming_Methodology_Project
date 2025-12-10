@@ -144,8 +144,8 @@ public class Player {
 
         // Check for passing Go (Index 0)
         if (oldPosition + steps >= SMALL_BOARD_SIZE) {
-            addMoney(20);
-            System.out.println("🎉 " + name + " passed Go and collected $20.");
+            addMoney(100);
+            System.out.println("🎉 " + name + " passed Go and collected $100.");
         }
     }
 

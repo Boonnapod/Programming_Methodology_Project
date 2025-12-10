@@ -82,7 +82,7 @@ class PlayerTest {
 
         player.move(4); // 18 + 4 = 22 -> pass GO
         assertEquals(2, player.getPosition());
-        assertEquals(initialMoney + 20, player.getMoney());
+        assertEquals(initialMoney + 100, player.getMoney());
     }
 
     // -------------------------------

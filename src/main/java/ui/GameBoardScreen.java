@@ -392,9 +392,9 @@ public class GameBoardScreen {
                         player.warp(newPosition);
 
                         if (newPosition == 0 && oldPosition != 0) {
-                            player.addMoney(20);
+                            player.addMoney(100);
                             refreshAllPlayersMoney();
-                            System.out.println(player.getName() + " passed Go! Collected $20.");
+                            System.out.println(player.getName() + " passed Go! Collected $100.");
                         }
                         updatePlayerTokens();
                     }
