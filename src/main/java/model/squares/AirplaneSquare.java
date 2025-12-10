@@ -11,6 +11,11 @@ import model.Player;
  */
 public class AirplaneSquare extends Square {
 
+    /**
+     * Constructs an AirplaneSquare with a specific name and position.
+     * * @param name     The name of the square.
+     * @param position The position index on the board.
+     */
     public AirplaneSquare(String name, int position) {
         super(name, position);
     }

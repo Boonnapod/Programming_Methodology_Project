@@ -2,10 +2,7 @@ package game;
 
 import model.*;
 import model.cards.*;
-import model.squares.AirplaneSquare;
-import model.squares.CardSquare;
-import model.squares.Property;
-import model.squares.Square;
+import model.squares.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -246,6 +243,13 @@ public class GameController {
      *
      * @param player The player who just moved.
      */
+    /**
+     * Identifies the type of square the player landed on and triggers the appropriate action.
+     * Supports Card squares, Property squares, Airplane squares, and standard squares.
+     * * [UPDATED] Added support for Rentable interface.
+     *
+     * @param player The player who just moved.
+     */
     public void handleLandedSquareAction(Player player) {
         Square landedSquare = board.getSquare(player.getPosition());
         System.out.println("Landed on: " + landedSquare.getName() + " (Position: " + landedSquare.getPosition() + ")");
@@ -263,14 +267,41 @@ public class GameController {
             }
 
         } else if (landedSquare instanceof Property) {
+            // Property implements Rentable, but has specific logic (Landmarks/Buyout)
+            // so we handle it specifically here first.
             handlePropertySquare(player, (Property) landedSquare);
 
         } else if (landedSquare instanceof AirplaneSquare) {
             handleAirplaneSquare(player);
 
+        } else if (landedSquare instanceof Rentable) {
+            // *** NEW: Check for generic Rentable squares (like IslandSquare) ***
+            handleRentableSquare(player, (Square) landedSquare);
+
         } else {
             landedSquare.landOn(player);
         }
+    }
+
+    /**
+     * [NEW METHOD] Handles generic Rentable squares (e.g. IslandSquare).
+     * Since Rentable interface only has calculateRent(), we might need to cast
+     * to specific types to handle ownership/buying if the interface doesn't support it.
+     */
+    public void handleRentableSquare(Player player, Square square) {
+        // Cast to Rentable interface to use its method
+        Rentable rentable = (Rentable) square;
+
+        // Example logic: Just print the calculated rent for now
+        // In a full implementation, you would check ownership here similar to Property.
+        // Since Rentable interface doesn't strictly define getOwner(),
+        // we usually delegate the logic to the square's landOn() or cast to specific types.
+
+        System.out.println("[Rentable Check] This square charges rent!");
+
+        // เรียกใช้ landOn ตามปกติเพื่อให้ Square จัดการ Logic ของตัวเอง (เช่น การจ่ายค่าเช่า/การซื้อ)
+        // ซึ่งภายใน class นั้น (เช่น IslandSquare) ควรจะมีการเรียกใช้ calculateRent() ของตัวเอง
+        square.landOn(player);
     }
 
     /**

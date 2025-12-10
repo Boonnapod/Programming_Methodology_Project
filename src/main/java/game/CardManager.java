@@ -30,6 +30,21 @@ public class CardManager {
         Collections.shuffle(deck);
     }
 
+    /**
+     * Populates the deck with a predefined set of action cards.
+     * <p>
+     * This method initializes the deck by adding various card types, including:
+     * <ul>
+     * <li><b>MoveToAirPlane:</b> Teleports the player to the Airport square.</li>
+     * <li><b>SkipTurnCard:</b> Forces the player to miss their next turn.</li>
+     * <li><b>ReceiveMoneyCard:</b> Grants a cash reward. One card features a randomized reward
+     * calculated as 10-20% of the player's initial money.</li>
+     * </ul>
+     * Duplicate cards are also added to ensure the deck has sufficient volume for gameplay.
+     * </p>
+     *
+     * @param players The list of players in the game (currently unused in this specific logic, but available for future scaling).
+     */
     private void initializeDeck(List<Player> players) {
         // 3.1 Move to Airplane card
         deck.add(new MoveToAirPlane("Move to AirPlane"));
@@ -39,7 +54,7 @@ public class CardManager {
 
         // 3.3 Receive Money card (Random 10-20%)
         Random random = new Random();
-        int amount = Player.getInitialMoney() * (random.nextInt(11) + 10) / 100;
+        int amount = Player.getInitialMoney() * (random.nextInt(11) + 10) / 100; // 10% - 20%
         deck.add(new ReceiveMoneyCard("You won the lottery! Collect $" + amount, amount));
 
         // Add duplicate cards to increase deck size

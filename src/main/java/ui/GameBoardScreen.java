@@ -1,8 +1,8 @@
 package ui;
 
 import javafx.scene.media.AudioClip;
-import javafx.scene.media.Media; // Import ใหม่
-import javafx.scene.media.MediaPlayer; // Import ใหม่
+import javafx.scene.media.Media;
+import javafx.scene.media.MediaPlayer;
 import java.net.URL;
 import game.GameController;
 import model.*;
@@ -31,6 +31,19 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+/**
+ * Represents the main game board screen where the gameplay takes place.
+ * <p>
+ * This class handles:
+ * <ul>
+ * <li>Rendering the board grid and squares (Properties, Special Squares).</li>
+ * <li>Visualizing player tokens and movement animations.</li>
+ * <li>Managing player turns, dice rolling, and interactions via Dialogs.</li>
+ * <li>Handling game events (buying property, paying rent, cards, jail).</li>
+ * <li>Displaying the "Game Over" screen.</li>
+ * </ul>
+ * </p>
+ */
 public class GameBoardScreen {
     private final Stage primaryStage;
     private final GameController gameController;
@@ -42,7 +55,6 @@ public class GameBoardScreen {
     private Label player2MoneyLabel;
     private Label playerTurnLabel;
 
-    // FIX 1: ประกาศตัวแปร winSound เพื่อเก็บ AudioClip และควบคุมการหยุด
     private AudioClip winSound;
 
     private final List<ImageView> playerTokens;
@@ -60,6 +72,14 @@ public class GameBoardScreen {
     private static final int WIDTH = 1000;
     private static final int HEIGHT = 800;
 
+    /**
+     * Constructs the GameBoardScreen.
+     *
+     * @param primaryStage       The main stage.
+     * @param gameController     The core game logic controller.
+     * @param players            The list of players participating.
+     * @param selectedCharIndices The indices of the character avatars selected by the players.
+     */
     public GameBoardScreen(Stage primaryStage, GameController gameController, List<Player> players, List<Integer> selectedCharIndices) {
         this.primaryStage = primaryStage;
         this.gameController = gameController;
@@ -72,6 +92,15 @@ public class GameBoardScreen {
         initializePlayerTokens();
     }
 
+    /**
+     * Initializes the visual tokens (character images) for all players.
+     * <p>
+     * This method creates {@link ImageView} instances for each player based on their selected character.
+     * It configures the token size, assigns a unique ID for CSS styling, and applies a colored
+     * {@link DropShadow} effect (LimeGreen for Player 1, Red for Player 2) to help distinguish
+     * players visually on the board. The created tokens are then added to the {@code playerTokens} list.
+     * </p>
+     */
     private void initializePlayerTokens() {
         Color[] shadowColors = {Color.LIMEGREEN, Color.RED};
 
@@ -94,6 +123,14 @@ public class GameBoardScreen {
         }
     }
 
+    /**
+     * Creates and returns the main gameplay scene.
+     * <p>
+     * Sets up the board layout, player status panels, roll button, and event listeners.
+     * </p>
+     *
+     * @return The gameplay {@link Scene}.
+     */
     public Scene createGameScene() {
         SoundManager.playBGM("board.mp3");
 
@@ -143,25 +180,20 @@ public class GameBoardScreen {
 
         Scene gameScene = new Scene(root, WIDTH, HEIGHT);
 
-        // --- FIX: เพิ่ม Key Event Handler สำหรับการทดสอบ (Cheat Mode) ---
-        // ทำให้สามารถกดคีย์บอร์ด 1-6 เพื่อบังคับผลลัพธ์ลูกเต๋าได้
+        // --- CHEAT MODE: Keyboard listener (1-6) to force dice result ---
         gameScene.setOnKeyPressed(event -> {
-            // ตรวจสอบว่าเป็นปุ่มตัวเลข 1 ถึง 6 หรือไม่
             if (event.getCode().isDigitKey()) {
                 try {
-                    // event.getCode().getChar() จะคืนค่า String ของตัวเลขที่กด
                     int steps = Integer.parseInt(event.getCode().getChar());
                     if (steps >= 1 && steps <= 6) {
-                        // เรียกใช้ฟังก์ชันเดินทดสอบ (ซึ่งจะตั้งค่า forcedResult ใน Dice)
                         handleTestMove(steps);
-                        event.consume(); // หยุดการส่งต่อ Event
+                        event.consume();
                     }
                 } catch (NumberFormatException e) {
                     // ignore
                 }
             }
         });
-        // ------------------------------------------------------------------
 
         try {
             gameScene.getStylesheets().add(getClass().getResource("/style.css").toExternalForm());
@@ -175,26 +207,48 @@ public class GameBoardScreen {
     // *** Turn Management Logic ***
     // =========================================================================
 
+    /**
+     * Starts the turn for the current player.
+     * <p>
+     * Checks for Jail or Skip Turn status before allowing the player to roll the dice.
+     * </p>
+     *
+     * @param rollButton The main roll button (passed to control its disabled state).
+     */
     private void startTurnAndAnimate(Button rollButton) {
         Player activePlayer = gameController.getCurrentPlayer();
 
-        // 1. ตรวจสอบสถานะติดคุกก่อน
+        // 1. Check Jail Status
         if (activePlayer.isInJail()) {
             handleJailTurn(activePlayer, rollButton);
             return;
         }
 
-        // 2. ตรวจสอบ Skip Turn
+        // 2. Check Skip Turn Status
         if (activePlayer.getSkipTurns() > 0) {
             showSkipTurnDialog(activePlayer, rollButton);
             return;
         }
 
-        // 3. ทอยเต๋า (มีอนิเมชัน)
+        // 3. Proceed to Roll
         executeRollAndMove(activePlayer, rollButton);
-
     }
 
+    /**
+     * Manages the turn logic for a player who is currently in Jail.
+     * <p>
+     * Displays a confirmation dialog offering the player two choices:
+     * <ul>
+     * <li><b>Pay $200:</b> If the player has sufficient funds, the bail is deducted,
+     * they are released immediately, and they proceed to roll the dice (taking their turn normally).</li>
+     * <li><b>Wait:</b> The player chooses to serve their sentence (or cannot afford bail).
+     * This delegates logic to {@link #processWaitInJail(Player, Button)}.</li>
+     * </ul>
+     * </p>
+     *
+     * @param player     The player whose turn it is.
+     * @param rollButton The roll dice button (needed to re-enable UI or pass to movement logic).
+     */
     private void handleJailTurn(Player player, Button rollButton) {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("In Jail");
@@ -215,7 +269,7 @@ public class GameBoardScreen {
                 refreshAllPlayersMoney();
                 showSimpleAlert("Released!", "You paid $200 bail. You can move now!");
 
-                // จ่ายแล้วเดินต่อเลย
+                // Move immediately after paying
                 executeRollAndMove(player, rollButton);
             } else {
                 showSimpleAlert("Error", "Not enough money to pay bail!");
@@ -226,6 +280,20 @@ public class GameBoardScreen {
         }
     }
 
+    /**
+     * Processes the logic when a player remains in jail (either by choice or lack of funds).
+     * <p>
+     * Decrements the player's remaining jail sentence counter.
+     * <ul>
+     * <li>If the remaining turns reach 0, the player is released and will be free on their <b>next</b> turn.</li>
+     * <li>Otherwise, the player remains incarcerated.</li>
+     * </ul>
+     * In both cases, the current turn ends immediately without rolling the dice.
+     * </p>
+     *
+     * @param player     The player currently in jail.
+     * @param rollButton The roll dice button (used to finalize the turn state).
+     */
     private void processWaitInJail(Player player, Button rollButton) {
         player.decrementJailTurns();
 
@@ -239,10 +307,12 @@ public class GameBoardScreen {
     }
 
     /**
-     * ทอยลูกเต๋าพร้อม Effect ตัวเลขวิ่ง
+     * Animates the dice roll and triggers the movement sequence.
+     *
+     * @param activePlayer The player taking the turn.
+     * @param rollButton   The UI button to update with the dice result.
      */
     private void executeRollAndMove(Player activePlayer, Button rollButton) {
-        // 1. *** ใส่เสียงลูกเต๋าตรงนี้ (เริ่มทอย) ***
         playDiceSound();
 
         Timeline diceAnimation = new Timeline();
@@ -261,7 +331,7 @@ public class GameBoardScreen {
 
             PauseTransition pause = new PauseTransition(Duration.seconds(0.5));
             pause.setOnFinished(event -> {
-                // ส่งต่อไปยัง Animation การเดิน
+                // Proceed to movement animation
                 animateMovement(activePlayer, actualSteps, rollButton);
             });
             pause.play();
@@ -270,6 +340,21 @@ public class GameBoardScreen {
         diceAnimation.play();
     }
 
+    /**
+     * Displays a dialog informing the player that they must skip their current turn.
+     * <p>
+     * This method performs the following actions:
+     * <ul>
+     * <li>Shows an information alert indicating how many skip turns remain.</li>
+     * <li>Decrements the player's skip turn counter by 1.</li>
+     * <li>Automatically advances the game to the next player's turn after the user acknowledges the dialog.</li>
+     * <li>Updates the turn display UI to reflect the next player.</li>
+     * </ul>
+     * </p>
+     *
+     * @param player     The player who is skipping the turn.
+     * @param rollButton The roll button, passed to {@link #updateTurnDisplay(Button)} to refresh the UI state.
+     */
     private void showSkipTurnDialog(Player player, Button rollButton) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("Skip Turn");
@@ -285,6 +370,13 @@ public class GameBoardScreen {
         updateTurnDisplay(rollButton);
     }
 
+    /**
+     * Animates the player token moving step-by-step across the board.
+     *
+     * @param player     The player moving.
+     * @param steps      The number of steps to move.
+     * @param rollButton The button to re-enable after movement.
+     */
     private void animateMovement(Player player, int steps, Button rollButton) {
         Timeline timeline = new Timeline();
         int boardSize = gameController.getBoard().getBoardSize();
@@ -315,15 +407,8 @@ public class GameBoardScreen {
                 handleLandedSquareInteraction(player, rollButton);
                 Square currentSquare = board.getSquare(player.getPosition());
 
-                // ---------------------------------------------------------
-                // 3. *** เรียกเสียงตกช่องตรงนี้ (สำคัญ!) ***
                 playSquareSound(currentSquare);
-                // ---------------------------------------------------------
 
-                // 4. เรียก Logic เมื่อตกช่อง (เช่น จ่ายเงิน/ติดคุก)
-                // gameController.handleLandOnSquare(currentSquare, player);
-
-                // 5. เปิดปุ่มให้กดต่อได้ (ถ้าจบเทิร์นแล้ว)
                 rollButton.setDisable(false);
             });
         });
@@ -335,21 +420,29 @@ public class GameBoardScreen {
     // *** Central Interaction Hub ***
     // =========================================================================
 
+    /**
+     * Determines the type of square landed on and delegates to the appropriate handler method.
+     * <p>
+     * This method acts as a central dispatcher for game logic interactions (Polymorphism in action).
+     * </p>
+     *
+     * @param player     The player who landed.
+     * @param rollButton The button control.
+     */
     private void handleLandedSquareInteraction(Player player, Button rollButton) {
         Square landedSquare = board.getSquare(player.getPosition());
         System.out.println(">>> Handling interaction at: " + landedSquare.getName() + " [" + player.getPosition() + "]");
 
-        // 1. Logic Model
+        // 1. Model Logic (if any specific logic exists in the square class)
         landedSquare.landOn(player);
 
-        // Update UI Money
         refreshAllPlayersMoney();
 
-        // 2. Logic UI (Polymorphism)
+        // 2. UI Logic Dispatch
         if (landedSquare instanceof Property) {
             handlePropertyAction(player, (Property) landedSquare, rollButton);
-        } else if (landedSquare instanceof IslandSquare) {  // *** เพิ่มบรรทัดนี้ ***
-            handleIslandAction(player, (IslandSquare) landedSquare, rollButton);  // *** และบรรทัดนี้ ***
+        } else if (landedSquare instanceof IslandSquare) {
+            handleIslandAction(player, (IslandSquare) landedSquare, rollButton);
         } else if (landedSquare instanceof CardSquare) {
             handleCardAction(player, rollButton);
         } else if (landedSquare instanceof AirplaneSquare) {
@@ -361,35 +454,29 @@ public class GameBoardScreen {
 
     private void handlePropertyAction(Player player, Property property, Button rollButton) {
         if (property.getOwner() != null && property.getOwner() != player) {
-            // Pay Rent (บังคับจ่าย, ห้ามมีปุ่ม Cancel)
+            // Case: Pay Rent (Mandatory)
             int rent = property.calculateRent(0);
 
-            // 1. สร้าง Alert พร้อมตั้งค่าให้เหลือแค่ปุ่ม OK เท่านั้น
-            Alert rentAlert = new Alert(Alert.AlertType.WARNING); // ใช้ WARNING เพื่อเน้นย้ำถึงค่าปรับ
+            Alert rentAlert = new Alert(Alert.AlertType.WARNING);
             rentAlert.setTitle("Mandatory Rent Payment");
             rentAlert.setHeaderText("PAY RENT! $" + rent);
             rentAlert.setContentText(player.getName() + " landed on " + property.getOwner().getName() + "'s property (" + property.getName() + "). Payment is mandatory.");
-
-            // บังคับให้มีแค่ปุ่ม OK เพื่อยอมรับเท่านั้น
             rentAlert.getButtonTypes().setAll(ButtonType.OK);
 
             styleDialog(rentAlert);
-            rentAlert.showAndWait(); // บังคับให้ผู้เล่นต้องกด OK เพื่อดำเนินการต่อ
+            rentAlert.showAndWait();
 
-            // 2. ดำเนินการหักเงินและจ่ายค่าเช่าทันที
             if (player.deductMoney(rent)) {
-                // จ่ายสำเร็จ
                 property.getOwner().addMoney(rent);
             } else {
-                // เงินไม่พอ: เข้าสู่กระบวนการล้มละลาย (จ่ายเงินที่มีทั้งหมด)
+                // Bankruptcy Logic: Transfer all remaining money
                 int moneyToPay = player.getMoney();
                 property.getOwner().addMoney(moneyToPay);
-                player.addMoney(-moneyToPay); // หักเงินทั้งหมดจนเหลือ 0 (เริ่มต้น Bankrupt Logic)
+                player.addMoney(-moneyToPay);
             }
             refreshAllPlayersMoney();
 
-            // Buyout Logic (ส่วนนี้ทำงานต่อจาก Payment ทันที)
-            // ... (โค้ด Buyout Logic เดิม) ...
+            // Case: Buyout Opportunity
             if (player.getMoney() > 0 && !property.isLandmark()) {
                 int buyoutPrice = (int)( property.getPrice() * 1.5);
                 if (player.getMoney() >= buyoutPrice) {
@@ -416,7 +503,7 @@ public class GameBoardScreen {
             endTurn(player, rollButton);
 
         } else if (property.getOwner() == player) {
-            // Upgrade
+            // Case: Upgrade to Landmark
             if (!property.isLandmark()) {
                 showUpgradePropertyDialog(player, property, rollButton);
             } else {
@@ -424,7 +511,7 @@ public class GameBoardScreen {
             }
 
         } else {
-            // Buy
+            // Case: Buy New Property
             showBuyPropertyDialog(player, property, rollButton);
         }
     }
@@ -446,7 +533,7 @@ public class GameBoardScreen {
         refreshAllPlayersMoney();
         updatePlayerTokens();
 
-        // Recursion Check: ถ้าย้ายที่จากการ์ด ให้เรียก Hub ใหม่
+        // Recursion Check: If the card moved the player, trigger interaction for the new square
         int newPosition = player.getPosition();
         if (newPosition != oldPosition) {
             System.out.println(">> Player moved by card. Triggering new square interaction...");
@@ -478,7 +565,7 @@ public class GameBoardScreen {
             updatePlayerTokens();
             refreshAllPlayersMoney();
 
-            // Recursion: ลงจอดแล้วเรียก Hub ใหม่
+            // Recursion: Land on new square
             handleLandedSquareInteraction(player, rollButton);
 
         } else {
@@ -496,19 +583,46 @@ public class GameBoardScreen {
             LotterySquare lotterySq = (LotterySquare) landedSquare;
             showSimpleAlert("Lottery", "You won the lottery! Prize: $" + lotterySq.getLastPrize());
 
-        //} else if (landedSquare instanceof GoToJailSquare) {
-            //showSimpleAlert("Arrested", "You are going to Jail!");
-            //updatePlayerTokens();
-
         } else if (landedSquare instanceof JailSquare) {
             if (player.isInJail()) {
                 showSimpleAlert("Jail", "You are in Jail!");
-            } //else {
-            //    showSimpleAlert("Jail", "Just Visiting.");
-            //}
+            }
         }
 
         endTurn(player, rollButton);
+    }
+
+    private void handleIslandAction(Player player, IslandSquare island, Button rollButton) {
+        if (island.getOwner() != null && island.getOwner() != player) {
+            // Pay Rent
+            int rent = island.calculateRent(0);
+
+            Alert rentAlert = new Alert(Alert.AlertType.WARNING);
+            rentAlert.setTitle("Island Rent");
+            rentAlert.setHeaderText("🏝️ PAY ISLAND RENT! $" + rent);
+            rentAlert.setContentText(player.getName() + " landed on " + island.getOwner().getName() + "'s island (" + island.getName() + ").");
+            rentAlert.getButtonTypes().setAll(ButtonType.OK);
+            styleDialog(rentAlert);
+            rentAlert.showAndWait();
+
+            if (player.deductMoney(rent)) {
+                island.getOwner().addMoney(rent);
+            } else {
+                int moneyToPay = player.getMoney();
+                island.getOwner().addMoney(moneyToPay);
+                player.addMoney(-moneyToPay);
+            }
+            refreshAllPlayersMoney();
+            endTurn(player, rollButton);
+
+        } else if (island.getOwner() == player) {
+            showSimpleAlert("Your Island", "Welcome back to your island: " + island.getName() + "!");
+            endTurn(player, rollButton);
+
+        } else {
+            // Buy Island
+            showBuyIslandDialog(player, island, rollButton);
+        }
     }
 
     // =========================================================================
@@ -524,10 +638,7 @@ public class GameBoardScreen {
     private void showBuyPropertyDialog(Player player, Property property, Button rollButton) {
         int price = property.getPrice();
 
-        // 1. ตรวจสอบว่าผู้เล่นมีเงินพอที่จะซื้อหรือไม่
         if (player.getMoney() >= price) {
-
-            // มีเงินพอ: เปิด Dialog ถามซื้อ
             Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
             alert.setTitle("Buy Property");
             alert.setHeaderText("Unowned Property: " + property.getName());
@@ -537,24 +648,41 @@ public class GameBoardScreen {
 
             Optional<ButtonType> result = alert.showAndWait();
 
-            // 2. ถ้าผู้เล่นกด OK
             if (result.isPresent() && result.get() == ButtonType.OK) {
-                // ดำเนินการซื้อ (หักเงินและเปลี่ยนเจ้าของ)
                 if (player.deductMoney(price)) {
                     property.setOwner(player);
                     updateSquareBox(property);
                 }
-                // ถ้า deductMoney ล้มเหลว (ซึ่งไม่น่าจะเกิดขึ้นเพราะเช็คเงินแล้ว) ก็จะไม่มีการเปลี่ยนแปลง
             }
-            // 3. ถ้าผู้เล่นกด Cancel/ปิด Dialog (ไม่ซื้อ) จะจบเทิร์นเลย
-
         } else {
-            // เงินไม่พอ: แสดงข้อความแจ้งให้ทราบเฉยๆ ว่าซื้อไม่ได้
             showSimpleAlert("Cannot Afford", property.getName() + " costs $" + price + ". You do not have enough money to buy it.");
-            // **FIX:** ไม่มีการดำเนินการซื้อหรือหักเงินใดๆ
         }
 
-        // อัปเดตเงิน (เผื่อมีการซื้อ) และจบเทิร์น
+        refreshAllPlayersMoney();
+        endTurn(player, rollButton);
+    }
+
+    private void showBuyIslandDialog(Player player, IslandSquare island, Button rollButton) {
+        int price = island.getPrice();
+
+        if (player.getMoney() >= price) {
+            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+            alert.setTitle("Buy Island");
+            alert.setHeaderText("🏝️ Unowned Island: " + island.getName());
+            alert.setContentText("Price: $" + price + "\nRent: $" + island.getRent() + "\n\nWould you like to buy it?");
+            styleDialog(alert);
+
+            Optional<ButtonType> result = alert.showAndWait();
+            if (result.isPresent() && result.get() == ButtonType.OK) {
+                if (player.deductMoney(price)) {
+                    island.setOwner(player);
+                    updateSquareBox(island);
+                }
+            }
+        } else {
+            showSimpleAlert("Cannot Afford", island.getName() + " costs $" + price + ". You do not have enough money.");
+        }
+
         refreshAllPlayersMoney();
         endTurn(player, rollButton);
     }
@@ -572,22 +700,17 @@ public class GameBoardScreen {
 
             int cost = property.getUpgradeCost();
 
-            // ตรวจสอบว่าเงินพอหรือไม่ ก่อนพยายามหักเงิน
             if (player.getMoney() >= cost) {
-                // เงินพอ: ดำเนินการอัปเกรด
                 if (player.deductMoney(cost)) {
                     property.setLandmark(true);
                     updateSquareBox(property);
                 }
             } else {
-                // เงินไม่พอ: แสดงข้อความแจ้งว่ายกเลิกการกระทำ
                 showSimpleAlert("Upgrade Failed", "Not enough money to upgrade! (Cost: $" + cost + "). Upgrade is cancelled.");
-                // **FIX:** ไม่มีการหักเงิน และไม่เกิดการล้มละลาย (เพราะเช็คก่อนแล้ว)
             }
             refreshAllPlayersMoney();
         }
 
-        // สิ้นสุดการปฏิสัมพันธ์บนช่องนี้ ไม่ว่าจะอัปเกรดสำเร็จ ยกเลิก หรือเงินไม่พอ
         endTurn(player, rollButton);
     }
 
@@ -597,41 +720,39 @@ public class GameBoardScreen {
         }
     }
 
-    // -------------------------------------------------------------------------
-    //  GAME OVER & BANKRUPTCY
-    // -------------------------------------------------------------------------
     private void checkBankruptcy(Player player) {
         if (player.getMoney() <= 0) {
             showGameOverScreen(player);
         }
     }
 
-    // FIX 2: ปรับเมธอด showGameOverScreen ให้เป็นไปตามกฎ "เกมยาจก" และจัดการเสียง
+    /**
+     * Displays the Game Over screen.
+     * <p>
+     * Stops the BGM, plays a victory sound, and shows the winner/loser logic
+     * (based on the Inverse Monopoly rule: First to Bankrupt wins).
+     * </p>
+     *
+     * @param bankruptPlayer The player who went bankrupt (the Winner).
+     */
     private void showGameOverScreen(Player bankruptPlayer) {
-        // *** 1. หยุด BGM ของ Board (สมมติว่า SoundManager มี stopBGM) ***
         SoundManager.stopBGM();
 
-        // *** 2. เล่นเพลง Win และเก็บ reference เพื่อให้หยุดได้ ***
         try {
             URL url = getClass().getResource("/soundfx/win.mp3");
             if (url != null) {
-                if (winSound != null) winSound.stop(); // หยุดเสียงเก่า เผื่อเรียกซ้ำ
+                if (winSound != null) winSound.stop();
                 winSound = new AudioClip(url.toExternalForm());
                 winSound.setVolume(0.5);
                 winSound.play();
             }
         } catch (Exception e) { System.err.println("Win sound error: " + e.getMessage()); }
 
-        // --- กำหนด Winner/Loser ตามกฎ "เกมยาจก" ---
-        Player winner = bankruptPlayer; // ผู้เล่นที่เงินหมดก่อน คือ ผู้ชนะ
+        Player winner = bankruptPlayer; // Winner is the first one to go bankrupt
         Player loser = players.stream()
                 .filter(p -> p != winner)
                 .findFirst()
-                .orElse(null);
-
-        if (loser == null) {
-            loser = winner;
-        }
+                .orElse(winner);
 
         VBox layout = new VBox(20);
         layout.setAlignment(Pos.CENTER);
@@ -645,7 +766,6 @@ public class GameBoardScreen {
         winnerLabel.setFont(Font.font("Arial", FontWeight.BOLD, 36));
         winnerLabel.setTextFill(Color.WHITE);
 
-        // ข้อความสำหรับกฎยาจก
         Label subLabel = new Label("ไม่เหลืออะไรแล้วชึวิต ลาก่อน...");
         subLabel.setFont(Font.font("Arial", 18));
         subLabel.setTextFill(Color.LIGHTGRAY);
@@ -668,18 +788,11 @@ public class GameBoardScreen {
         exitBtn.setStyle("-fx-font-size: 18px; -fx-background-color: #c0392b; -fx-text-fill: white; -fx-cursor: hand;");
 
         playAgainBtn.setOnAction(e -> {
-            // *** FIX 3: หยุดเพลง win.mp3 ทันทีเมื่อกด Play Again และกลับไปหน้าเลือกตัวละคร ***
             if (winSound != null) {
                 winSound.stop();
             }
-
-            // 1. สร้าง GameController ใหม่ (เพื่อรีเซ็ตสถานะเกมทั้งหมด)
             GameController newGame = new GameController();
-
-            // 2. สร้าง CharacterSelectScreen ใหม่
             CharacterSelectScreen selectScreen = new CharacterSelectScreen(primaryStage, newGame);
-
-            // 3. เปลี่ยน Scene (CharacterSelectScreen ควรจะเปิดเพลง select.mp3 เอง)
             primaryStage.setScene(selectScreen.createCharacterSelectScene());
         });
 
@@ -705,7 +818,6 @@ public class GameBoardScreen {
         alert.showAndWait();
     }
 
-    // *** STYLE HELPER ***
     private void styleDialog(Dialog<?> dialog) {
         DialogPane dialogPane = dialog.getDialogPane();
         try {
@@ -720,7 +832,6 @@ public class GameBoardScreen {
         Player nextPlayer = gameController.getCurrentPlayer();
         playerTurnLabel.setText("Turn: " + nextPlayer.getName());
 
-        // Reset Button Text
         rollButton.setText("Roll Dice!");
         rollButton.setDisable(false);
 
@@ -739,6 +850,9 @@ public class GameBoardScreen {
     // *** Board Rendering Logic ***
     // =========================================================================
 
+    /**
+     * Updates the position of player tokens on the grid.
+     */
     public void updatePlayerTokens() {
         for (ImageView token : playerTokens) {
             if (token.getParent() instanceof StackPane) {
@@ -777,49 +891,30 @@ public class GameBoardScreen {
         return null;
     }
 
-
-    // ใน GameBoardScreen.java
-// ...
-
-    private VBox createSquareBox(Square square, int index) { // <--- **FIXED: รับ int index เข้ามา**
-
-        // --- NEW: 1. Label แสดงหมายเลขช่อง (Index Label) ---
+    private VBox createSquareBox(Square square, int index) {
         Label indexLabel = new Label("#" + index);
         indexLabel.setFont(Font.font("Arial", FontWeight.BOLD, 10));
         indexLabel.setTextFill(Color.web("#333333"));
-        // ----------------------------------------------------
 
-        // 2. สร้าง Label ชื่อช่องเหมือนเดิม
         Label title = new Label(square.getName());
         title.setFont(Font.font("Arial", FontWeight.BOLD, 12));
         title.setWrapText(true);
         title.setAlignment(Pos.CENTER);
 
-        // 3. เรียกใช้เมธอดสร้างไอคอน
         ImageView iconView = createSquareIcon(square);
 
-        // 4. สร้าง VBox เพื่อรวมภาพและข้อความ
         VBox box = new VBox(2);
-
-        // **FIX: เพิ่ม indexLabel เป็น Children ตัวแรกเสมอ**
         box.getChildren().add(indexLabel);
-
         if (iconView != null) {
-            // ถ้ามีรูป ให้ใส่รูปตามหลัง index
             box.getChildren().add(iconView);
         }
-
-        // ใส่ชื่อช่องเป็น Children ตัวสุดท้ายเสมอ
         box.getChildren().add(title);
-        // --------------------------------------------------------------
 
         box.setAlignment(Pos.CENTER);
         box.setPrefSize(100, 100);
 
-        // เรียกใช้ Style สีพื้นหลังเดิมของคุณ
         updateSquareBoxStyle(box, square);
 
-        // ตั้งค่า Border พื้นฐาน
         box.setBorder(new Border(new BorderStroke(
                 Color.BLACK,
                 BorderStrokeStyle.SOLID,
@@ -844,8 +939,6 @@ public class GameBoardScreen {
             backgroundColor = "#A9A9A9"; // Airport
         } else if (square instanceof LotterySquare) {
             backgroundColor = "#FFFF99"; // Lottery
-        //} else if (square instanceof GoToJailSquare) {
-            //backgroundColor = "#FFA500"; // Go To Jail
         } else if (square instanceof Property) {
             Property property = (Property) square;
             if (property.getOwner() != null) {
@@ -887,43 +980,32 @@ public class GameBoardScreen {
     }
 
     private void updateSquareBox(Square square) {
-        // 1. คำนวณหาตำแหน่งใน Grid
         int row = getRowForPosition(square.getPosition());
         int col = getColForPosition(square.getPosition());
-        int index = square.getPosition(); // Index คือตำแหน่งของช่อง
+        int index = square.getPosition();
 
-        // 2. ดึง StackPane ออกมาจาก Grid
         StackPane cell = getCellFromGrid(row, col);
 
         if (cell != null && !cell.getChildren().isEmpty() && cell.getChildren().get(0) instanceof VBox) {
             VBox squareBox = (VBox) cell.getChildren().get(0);
-
-            // 3. ล้างเนื้อหาเก่าออกให้หมด
             squareBox.getChildren().clear();
 
-            // --- NEW: 4. Recreate Index Label ---
             Label indexLabel = new Label("#" + index);
             indexLabel.setFont(Font.font("Arial", FontWeight.BOLD, 10));
             indexLabel.setTextFill(Color.web("#333333"));
             squareBox.getChildren().add(indexLabel);
-            // -----------------------------------
 
-            // 5. สร้างไอคอนใหม่
             ImageView iconView = createSquareIcon(square);
-
-            // 6. สร้าง Label ชื่อช่องใหม่
             Label title = new Label(square.getName());
             title.setFont(Font.font("Arial", FontWeight.BOLD, 12));
             title.setWrapText(true);
             title.setAlignment(Pos.CENTER);
 
-            // 7. ใส่กลับเข้าไปใน VBox
             if (iconView != null) {
                 squareBox.getChildren().add(iconView);
             }
             squareBox.getChildren().add(title);
 
-            // 8. อัปเดตสีและขอบ
             updateSquareBoxStyle(squareBox, square);
         }
     }
@@ -941,7 +1023,6 @@ public class GameBoardScreen {
 
                 if (squareIndex != -1 && squareIndex < board.getBoardSize()) {
                     Square square = board.getSquare(squareIndex);
-                    // *** FIX: ส่ง squareIndex เข้าไปเป็นพารามิเตอร์ตัวที่สอง ***
                     VBox squareBox = createSquareBox(square, squareIndex);
                     cell.getChildren().add(squareBox);
                     cell.setAlignment(Pos.CENTER);
@@ -992,7 +1073,7 @@ public class GameBoardScreen {
             imageView.setFitWidth(50);
             imageView.setPreserveRatio(true);
         } catch (Exception e) {
-            System.err.println("!!! ERROR: ไม่พบไฟล์ภาพตัวละคร: " + CHARACTER_FILES[index]);
+            System.err.println("!!! ERROR: Character not found: " + CHARACTER_FILES[index]);
             imageView.setFitWidth(50);
         }
         return imageView;
@@ -1033,7 +1114,6 @@ public class GameBoardScreen {
     }
 
     public void updatePlayerMoney(Player player) {
-        // 1. หาว่าต้องอัปเดต Label ของใคร
         Label targetLabel = null;
         if (player == players.get(0)) {
             targetLabel = player1MoneyLabel;
@@ -1041,21 +1121,13 @@ public class GameBoardScreen {
             targetLabel = player2MoneyLabel;
         }
 
-        // 2. ถ้าเจอ Label ที่ต้องอัปเดต
         if (targetLabel != null) {
-            int oldMoney = getMoneyFromLabel(targetLabel); // เงินที่โชว์อยู่ (ค่าเก่า)
-            int newMoney = player.getMoney();              // เงินจริงตอนนี้ (ค่าใหม่)
+            int oldMoney = getMoneyFromLabel(targetLabel);
+            int newMoney = player.getMoney();
 
-            // 3. เปรียบเทียบ: ถ้าเงินไม่เท่าเดิม ค่อยเล่นเสียงและเปลี่ยนข้อความ
             if (oldMoney != newMoney) {
-                // เล่นเสียงเฉพาะตอนเงินเปลี่ยน
                 playSound("lottery.mp3");
-
-                // อัปเดตข้อความ
                 targetLabel.setText("Money: $" + newMoney);
-
-                // (Optional) ปรินท์เช็คใน Console
-                // System.out.println("Money changed: " + oldMoney + " -> " + newMoney);
             }
         }
     }
@@ -1063,43 +1135,32 @@ public class GameBoardScreen {
     private ImageView createSquareIcon(Square square) {
         String fileName = null;
 
-        // --- ส่วนตรวจสอบ Property (บ้าน/แลนด์มาร์ค) ---
         if (square instanceof Property) {
             Property prop = (Property) square;
-
-            // เช็ค Landmark ก่อน (สำคัญมาก!)
             if (prop.isLandmark()) {
-                fileName = "landmark.png"; // ใช้รูปแลนด์มาร์ค
+                fileName = "landmark.png";
+            } else if (prop.getOwner() != null) {
+                fileName = "house.png";
             }
-            // ถ้าไม่ใช่ Landmark แต่มีเจ้าของแล้ว
-            else if (prop.getOwner() != null) {
-                fileName = "house.png";    // ใช้รูปบ้าน
-            }
-        }
-
-        // --- ส่วนตรวจสอบช่องพิเศษอื่นๆ (เหมือนเดิม) ---
-        else if (square instanceof LotterySquare) {
+        } else if (square instanceof LotterySquare) {
             fileName = "ingots.png";
         } else if (square instanceof TaxSquare) {
             fileName = "bag.png";
         } else if (square instanceof JailSquare) {
             fileName = "jail.png";
-        }else if (square instanceof IslandSquare) {
+        } else if (square instanceof IslandSquare) {
             IslandSquare island = (IslandSquare) square;
             if (island.getOwner() != null) {
-                fileName = "island.png"; // You'll need to add this image to /Image/
+                fileName = "island.png";
             }
-        }
-        else if (square instanceof AirplaneSquare) {
+        } else if (square instanceof AirplaneSquare) {
             fileName = "plane.png";
         } else if (square instanceof CardSquare) {
             fileName = "q.png";
         }
 
-        // --- โหลดรูปภาพ ---
         if (fileName != null) {
             try {
-                // เช็คว่าไฟล์อยู่ใน /Image/ จริงๆ
                 Image img = new Image(getClass().getResourceAsStream("/Image/" + fileName));
                 ImageView view = new ImageView(img);
                 view.setFitWidth(45);
@@ -1112,47 +1173,40 @@ public class GameBoardScreen {
         }
         return null;
     }
+
     private void playDiceSound() {
         try {
-            // โหลดไฟล์เสียงจาก path /Sound/dice.mp3
             URL soundResource = getClass().getResource("/soundfx/dice.mp3");
-
-            if (soundResource != null) {
-                AudioClip sound = new AudioClip(soundResource.toExternalForm());
-                sound.setVolume(1.0); // ปรับความดัง 0.0 - 1.0
-                sound.play();
-            } else {
-                System.err.println("!!! Error: ไม่พบไฟล์เสียง dice.mp3 ใน /soundfx/");
-            }
-        } catch (Exception e) {
-            System.err.println("Error playing sound: " + e.getMessage());
-        }
-
-    }
-    private void playSound(String fileName) {
-        try {
-            // *** แก้ไข: เปลี่ยนจาก /Sound/ เป็น /soundfx/ ***
-            URL soundResource = getClass().getResource("/soundfx/" + fileName);
-
             if (soundResource != null) {
                 AudioClip sound = new AudioClip(soundResource.toExternalForm());
                 sound.setVolume(1.0);
                 sound.play();
             } else {
-                System.err.println("!!! ไม่พบไฟล์เสียง: /soundfx/" + fileName);
+                System.err.println("!!! Error: dice.mp3 not found");
+            }
+        } catch (Exception e) {
+            System.err.println("Error playing sound: " + e.getMessage());
+        }
+    }
+
+    private void playSound(String fileName) {
+        try {
+            URL soundResource = getClass().getResource("/soundfx/" + fileName);
+            if (soundResource != null) {
+                AudioClip sound = new AudioClip(soundResource.toExternalForm());
+                sound.setVolume(1.0);
+                sound.play();
+            } else {
+                System.err.println("!!! Sound not found: /soundfx/" + fileName);
             }
         } catch (Exception e) {
             System.err.println("Error playing sound [" + fileName + "]: " + e.getMessage());
         }
     }
 
-    /**
-     * เช็คประเภทช่องและเล่นเสียงตามที่กำหนด
-     */
     private void playSquareSound(Square square) {
         String soundFile = null;
 
-        // 1. เช็คว่าตกช่องแบบไหน
         if (square instanceof CardSquare) {
             soundFile = "card.mp3";
         } else if (square instanceof JailSquare) {
@@ -1163,122 +1217,42 @@ public class GameBoardScreen {
             soundFile = "plane.mp3";
         }
 
-        // 2. ถ้ามีชื่อไฟล์ ให้พยายามเล่น
         if (soundFile != null) {
-            System.out.println(">> กำลังพยายามเล่นเสียง: " + soundFile); // DEBUG LINE
             try {
-                // ต้องใส่ /Sound/ นำหน้าเสมอ
                 URL soundResource = getClass().getResource("/soundfx/" + soundFile);
-
                 if (soundResource != null) {
                     AudioClip sound = new AudioClip(soundResource.toExternalForm());
                     sound.setVolume(1.0);
                     sound.play();
-                    System.out.println(">> เล่นเสียงสำเร็จ!"); // DEBUG LINE
-                } else {
-                    System.err.println("!!! หาไฟล์ไม่เจอ: /soundfx/" + soundFile);
-                    System.err.println("!!! เช็คว่าไฟล์อยู่ใน src/main/resources/soundfx/ หรือไม่");
                 }
             } catch (Exception e) {
-                System.err.println("!!! Error ขณะเล่นเสียง: " + e.getMessage());
-                e.printStackTrace();
+                System.err.println("!!! Error playing sound: " + e.getMessage());
             }
-        } else {
-            System.out.println(">> ช่องนี้ไม่มีเสียง (Type: " + square.getClass().getSimpleName() + ")");
         }
     }
-    /**
-     * ดึงค่าเงินที่เป็นตัวเลขออกมาจาก Label (เช่น "Money: $2000" -> 2000)
-     */
+
     private int getMoneyFromLabel(Label label) {
         try {
             String text = label.getText();
             if (text == null || text.isEmpty()) return 0;
-            // ลบทุกตัวอักษรที่ไม่ใช่ตัวเลขและเครื่องหมายลบออก
             String numberOnly = text.replaceAll("[^0-9-]", "");
             return Integer.parseInt(numberOnly);
         } catch (Exception e) {
-            return 0; // กรณี error ให้ถือว่าเป็น 0
+            return 0;
         }
     }
+
     private void handleTestMove(int steps) {
         Button rollButton = (Button) primaryStage.getScene().lookup("#roll-button");
         if (rollButton == null || rollButton.isDisable()) {
-            System.out.println("TEST MOVE: Cannot initiate test move while another action is in progress.");
             return;
         }
 
         Player activePlayer = gameController.getCurrentPlayer();
-
-        // **FIX:** 1. บังคับผลลัพธ์ของ Dice ใน GameController
-        // (สมมติว่า gameController มีเมธอด getDice() ที่เข้าถึง Dice object ได้)
         gameController.getDice().setForcedResult(steps);
-
-        // 2. ปิดปุ่ม Roll เพื่อป้องกันการกดซ้อนระหว่าง Animation
         rollButton.setDisable(true);
-
-        // 3. เรียกใช้ขั้นตอนการทอยปกติ (executeRollAndMove)
-        // ซึ่งเมธอดนี้จะเรียก Dice.roll() และได้ผลลัพธ์ตามที่บังคับไว้
         executeRollAndMove(activePlayer, rollButton);
 
-        System.out.println("TEST MOVE: " + activePlayer.getName() + " forces roll to " + steps + " steps (Key: " + steps + ")");
-    }
-    private void handleIslandAction(Player player, IslandSquare island, Button rollButton) {
-        if (island.getOwner() != null && island.getOwner() != player) {
-            // จ่ายค่าเช่า (บังคับ)
-            int rent = island.calculateRent(0);
-
-            Alert rentAlert = new Alert(Alert.AlertType.WARNING);
-            rentAlert.setTitle("Island Rent");
-            rentAlert.setHeaderText("🏝️ PAY ISLAND RENT! $" + rent);
-            rentAlert.setContentText(player.getName() + " landed on " + island.getOwner().getName() + "'s island (" + island.getName() + ").");
-            rentAlert.getButtonTypes().setAll(ButtonType.OK);
-            styleDialog(rentAlert);
-            rentAlert.showAndWait();
-
-            if (player.deductMoney(rent)) {
-                island.getOwner().addMoney(rent);
-            } else {
-                int moneyToPay = player.getMoney();
-                island.getOwner().addMoney(moneyToPay);
-                player.addMoney(-moneyToPay);
-            }
-            refreshAllPlayersMoney();
-            endTurn(player, rollButton);
-
-        } else if (island.getOwner() == player) {
-            // เจ้าของเอง ไม่มีอะไรเกิดขึ้น
-            showSimpleAlert("Your Island", "Welcome back to your island: " + island.getName() + "!");
-            endTurn(player, rollButton);
-
-        } else {
-            // ยังไม่มีเจ้าของ ให้ซื้อ
-            showBuyIslandDialog(player, island, rollButton);
-        }
-    }
-
-    private void showBuyIslandDialog(Player player, IslandSquare island, Button rollButton) {
-        int price = island.getPrice();
-
-        if (player.getMoney() >= price) {
-            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-            alert.setTitle("Buy Island");
-            alert.setHeaderText("🏝️ Unowned Island: " + island.getName());
-            alert.setContentText("Price: $" + price + "\nRent: $" + island.getRent() + "\n\nWould you like to buy it?");
-            styleDialog(alert);
-
-            Optional<ButtonType> result = alert.showAndWait();
-            if (result.isPresent() && result.get() == ButtonType.OK) {
-                if (player.deductMoney(price)) {
-                    island.setOwner(player);
-                    updateSquareBox(island);
-                }
-            }
-        } else {
-            showSimpleAlert("Cannot Afford", island.getName() + " costs $" + price + ". You do not have enough money.");
-        }
-
-        refreshAllPlayersMoney();
-        endTurn(player, rollButton);
+        System.out.println("TEST MOVE: " + activePlayer.getName() + " forces roll to " + steps + " steps");
     }
 }

@@ -119,7 +119,7 @@ public class Board {
 
     /**
      * Gets the total size of the board.
-     *
+     *4
      * @return The number of squares on the board (20).
      */
     public int getBoardSize() {
