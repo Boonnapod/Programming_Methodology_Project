@@ -448,7 +448,23 @@ public class GameBoardScreen {
         }
     }
 
-
+    /**
+     * Manages the interaction when a player lands on a Card Square.
+     * <p>
+     * This method performs the following actions:
+     * <ol>
+     * <li>Draws a card from the deck via the {@code GameController}.</li>
+     * <li>Displays the card's description in a popup dialog.</li>
+     * <li>Executes the card's effect (which may involve moving the player or modifying money).</li>
+     * <li><b>Recursive Check:</b> If the card moved the player to a different square (e.g., "Go to Airport"),
+     * it immediately triggers the interaction logic for that new square.</li>
+     * <li>Otherwise, it ends the turn.</li>
+     * </ol>
+     * </p>
+     *
+     * @param player     The player who landed on the card square.
+     * @param rollButton The roll button, passed along to handle the end of the turn or recursive actions.
+     */
     private void handleCardAction(Player player, Button rollButton) {
         int oldPosition = player.getPosition();
 
@@ -475,7 +491,20 @@ public class GameBoardScreen {
             endTurn(player, rollButton);
         }
     }
-
+    /**
+     * Handles the interaction for the Airplane (Travel) Square.
+     * <p>
+     * Displays a dialog allowing the player to choose any square on the board as a destination.
+     * <ul>
+     * <li>If a destination is chosen: The player is moved, the UI is updated, and the logic
+     * for the <b>new square</b> is triggered recursively.</li>
+     * <li>If the dialog is cancelled: The player stays put, and the turn ends.</li>
+     * </ul>
+     * </p>
+     *
+     * @param player     The player using the airplane.
+     * @param rollButton The roll button, required for the subsequent interaction handling.
+     */
     private void handleAirplaneAction(Player player, Button rollButton) {
         List<Square> allSquares = board.getSquares();
         List<String> choices = allSquares.stream()
@@ -507,6 +536,22 @@ public class GameBoardScreen {
         }
     }
 
+    /**
+     * Handles logic for standard squares that do not require complex user input.
+     * <p>
+     * This method processes:
+     * <ul>
+     * <li><b>Tax Squares:</b> Displays the tax amount paid.</li>
+     * <li><b>Lottery Squares:</b> Displays the prize amount won.</li>
+     * <li><b>Jail Squares:</b> Displays a status message if the player is incarcerated.</li>
+     * </ul>
+     * After displaying the appropriate alert, the turn is ended.
+     * </p>
+     *
+     * @param player       The player taking the action.
+     * @param landedSquare The specific square instance the player landed on.
+     * @param rollButton   The roll button, used to finalize the turn.
+     */
     private void handleGeneralSquareAction(Player player, Square landedSquare, Button rollButton) {
         if (landedSquare instanceof TaxSquare) {
             TaxSquare taxSq = (TaxSquare) landedSquare;
@@ -528,13 +573,43 @@ public class GameBoardScreen {
     // =========================================================================
     // *** Helper Methods & UI Utilities ***
     // =========================================================================
-
+    /**
+     * Finalizes the current player's turn.
+     * <p>
+     * This method checks for bankruptcy conditions, advances the game state to the next player
+     * via the {@code GameController}, and updates the UI (Turn Label and Roll Button)
+     * to reflect the next player's turn.
+     * </p>
+     *
+     * @param player     The player finishing their turn.
+     * @param rollButton The roll button to be re-enabled and updated for the next player.
+     */
     private void endTurn(Player player, Button rollButton) {
         checkBankruptcy(player);
         gameController.moveToNextPlayer();
         updateTurnDisplay(rollButton);
     }
 
+    /**
+     * Displays a dialog offering the player the option to purchase an unowned property.
+     * <p>
+     * Logic flow:
+     * <ol>
+     * <li>Checks if the player has sufficient funds.</li>
+     * <li>If yes, shows a confirmation dialog.
+     * <ul>
+     * <li>If confirmed: Deducts money, assigns ownership, and updates the visual square.</li>
+     * </ul>
+     * </li>
+     * <li>If no, shows an alert stating the player cannot afford the property.</li>
+     * <li>Refreshes money labels and ends the turn.</li>
+     * </ol>
+     * </p>
+     *
+     * @param player     The potential buyer.
+     * @param property   The property available for purchase.
+     * @param rollButton The roll button, used to end the turn after the decision.
+     */
     private void showBuyPropertyDialog(Player player, Property property, Button rollButton) {
         int price = property.getPrice();
 
@@ -562,6 +637,26 @@ public class GameBoardScreen {
         endTurn(player, rollButton);
     }
 
+    /**
+     * Displays a dialog offering the player the option to purchase an unowned Island.
+     * <p>
+     * Logic flow:
+     * <ol>
+     * <li>Checks if the player has sufficient funds to cover the island's price.</li>
+     * <li>If sufficient, presents a confirmation dialog with price and rent details.
+     * <ul>
+     * <li>If confirmed: Deducts the price, transfers ownership to the player, and updates the board visual.</li>
+     * </ul>
+     * </li>
+     * <li>If insufficient funds, displays an alert notifying the player they cannot afford it.</li>
+     * <li>Finally, refreshes all player money displays and ends the turn.</li>
+     * </ol>
+     * </p>
+     *
+     * @param player     The player attempting to buy the island.
+     * @param island     The specific IslandSquare being purchased.
+     * @param rollButton The roll button, used to finalize the turn after the transaction.
+     */
     private void showBuyIslandDialog(Player player, IslandSquare island, Button rollButton) {
         int price = island.getPrice();
 
@@ -587,6 +682,27 @@ public class GameBoardScreen {
         endTurn(player, rollButton);
     }
 
+    /**
+     * Displays a dialog allowing the property owner to upgrade their property to a Landmark.
+     * <p>
+     * Logic flow:
+     * <ol>
+     * <li>Shows a confirmation dialog with the upgrade cost and benefits (Rent x3).</li>
+     * <li>If the user confirms, checks if the player has enough money.
+     * <ul>
+     * <li>If yes: Deducts the cost, sets the property as a Landmark, and updates the board visual.</li>
+     * <li>If no: Displays an error alert indicating the upgrade failed due to lack of funds.</li>
+     * </ul>
+     * </li>
+     * <li>Refreshes money displays if an attempt was made.</li>
+     * <li>Ends the turn regardless of the outcome.</li>
+     * </ol>
+     * </p>
+     *
+     * @param player     The owner of the property.
+     * @param property   The property to be upgraded.
+     * @param rollButton The roll button, used to finalize the turn.
+     */
     private void showUpgradePropertyDialog(Player player, Property property, Button rollButton) {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("Upgrade Property");
@@ -613,13 +729,28 @@ public class GameBoardScreen {
 
         endTurn(player, rollButton);
     }
-
+    /**
+     * Refreshes the money display labels for all players in the game.
+     * <p>
+     * Iterates through the list of players and calls {@code updatePlayerMoney} for each one
+     * to ensure the UI accurately reflects current balances (e.g., after rent payments or purchases).
+     * </p>
+     */
     private void refreshAllPlayersMoney() {
         for (Player p : players) {
             updatePlayerMoney(p);
         }
     }
 
+    /**
+     * Checks if a specific player has met the bankruptcy condition.
+     * <p>
+     * If the player's money drops to zero or less, this method triggers the Game Over sequence
+     * by calling {@code showGameOverScreen}.
+     * </p>
+     *
+     * @param player The player to check for bankruptcy.
+     */
     private void checkBankruptcy(Player player) {
         if (player.getMoney() <= 0) {
             showGameOverScreen(player);
@@ -709,6 +840,18 @@ public class GameBoardScreen {
         primaryStage.setScene(gameOverScene);
     }
 
+    /**
+     * Displays a simple information alert dialog to the user.
+     * <p>
+     * This helper method abstracts the creation of a standard JavaFX {@code Alert}.
+     * It sets the title and content text, removes the default header text, applies the
+     * game's custom CSS styling via {@link #styleDialog(Dialog)}, and waits for the user
+     * [cite_start]to close the dialog before proceeding[cite: 127].
+     * </p>
+     *
+     * @param title   The title text to display in the dialog window.
+     * @param content The main message body text to display to the user.
+     */
     private void showSimpleAlert(String title, String content) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle(title);
@@ -718,6 +861,16 @@ public class GameBoardScreen {
         alert.showAndWait();
     }
 
+    /**
+     * Applies custom CSS styling to a dialog window.
+     * <p>
+     * This method retrieves the {@code DialogPane} of the provided dialog and adds the
+     * "style.css" stylesheet and the "game-dialog" CSS class. It includes error handling
+     * [cite_start]to catch and log exceptions if the stylesheet resource cannot be found or loaded[cite: 127].
+     * </p>
+     *
+     * @param dialog The JavaFX {@link Dialog} instance to be styled.
+     */
     private void styleDialog(Dialog<?> dialog) {
         DialogPane dialogPane = dialog.getDialogPane();
         try {
@@ -728,6 +881,20 @@ public class GameBoardScreen {
         }
     }
 
+    /**
+     * Updates the UI elements to reflect the current player's turn.
+     * <p>
+     * This method performs the following UI updates:
+     * <ul>
+     * <li>Updates the turn label text with the name of the current player from the {@code GameController}.</li>
+     * <li>Resets the "Roll Dice!" button text and re-enables it for the new turn.</li>
+     * <li>Changes the background color of the turn label to visually match the player
+     * (e.g., LimeGreen for Player 1, Red for Player 2) [cite_start]using inline CSS[cite: 127].</li>
+     * </ul>
+     * </p>
+     *
+     * @param rollButton The roll button to be reset and re-enabled.
+     */
     private void updateTurnDisplay(Button rollButton) {
         Player nextPlayer = gameController.getCurrentPlayer();
         playerTurnLabel.setText("Turn: " + nextPlayer.getName());
@@ -739,6 +906,17 @@ public class GameBoardScreen {
         playerTurnLabel.setStyle("-fx-text-fill: white; -fx-background-color: " + toHexString(playerColor) + "; -fx-padding: 5; -fx-border-radius: 5;");
     }
 
+    /**
+     * Converts a JavaFX {@code Color} object into a hexadecimal string format.
+     * <p>
+     * This utility method takes the Red, Green, and Blue components of the color
+     * (scaled to 0-255) and formats them into a standard HTML/CSS hex string
+     * (e.g., "#RRGGBB"). [cite_start]This is used primarily for applying inline CSS styles[cite: 127].
+     * </p>
+     *
+     * @param color The {@link Color} object to convert.
+     * @return A string representing the color in hexadecimal format (e.g., "#FF0000").
+     */
     private String toHexString(Color color) {
         return String.format("#%02X%02X%02X",
                 (int) (color.getRed() * 255),
